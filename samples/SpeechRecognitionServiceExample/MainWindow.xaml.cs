@@ -30,23 +30,46 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // </copyright>
+// Get a handle to an application window.
 
 namespace Microsoft.CognitiveServices.SpeechRecognition
 {
     using System;
+    using Microsoft.Cognitive.LUIS;
+    using System.Windows.Forms;
     using System.ComponentModel;
     using System.Configuration;
     using System.Diagnostics;
     using System.IO;
     using System.IO.IsolatedStorage;
     using System.Runtime.CompilerServices;
+    using System.Runtime.InteropServices;
     using System.Windows;
+    using System.Collections.Generic;
+    using System.Threading;
+    using SpeechToTextWPFSample.Models;
+    using System.Linq;
+    using System.Windows.Automation.Peers;
+    using System.Windows.Automation.Provider;
+    using Newtonsoft.Json;
+    using Newtonsoft.Json.Serialization;
+
+
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
+        [DllImport("USER32.DLL", CharSet = CharSet.Unicode)]
+        public static extern IntPtr FindWindow(string lpClassName,
+    string lpWindowName);
+
+        // Activate an application window.
+        [DllImport("USER32.DLL")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+
         /// <summary>
         /// The isolated storage subscription key file name.
         /// </summary>
@@ -72,6 +95,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         /// The microphone client
         /// </summary>
         private MicrophoneRecognitionClient micClient;
+
+        private System.Windows.Threading.DispatcherTimer dispatcherTimer;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainWindow"/> class.
@@ -226,7 +252,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         /// </value>
         private string DefaultLocale
         {
-            get { return "en-US"; }
+            get { return "en-GB"; }
         }
 
         /// <summary>
@@ -321,9 +347,70 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this.IsDataClientDictation = false;
 
             // Set the default choice for the group of checkbox.
+            //this._micIntentRadioButton.IsChecked = true;
             this._micRadioButton.IsChecked = true;
-
             this.SubscriptionKey = this.GetSubscriptionKeyFromIsolatedStorage();
+
+            ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
+            IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
+            invokeProvider.Invoke();
+
+            dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
+            dispatcherTimer.Tick += dispatcherTimer_Tick;
+            dispatcherTimer.Interval = new TimeSpan(0, 0, 5);
+            dispatcherTimer.Start();
+
+            ListCommands();
+
+        }
+
+        // Send a series of key presses to the Calculator application.
+        private void button1_Click(object sender, RoutedEventArgs e)
+        {
+            //List<string> keys = new List<string>(new string[] { "^`" });
+            //List<string> keys = new List<string>(new string[] { "^+%\\" });
+            List<string> keys = new List<string>(new string[] { "111", "*", "2", "=" });
+            SendKeysCustom("ApplicationFrameWindow","Calculator",keys);
+        }
+
+        private static void SendKeysCustom(string applicationClass, string applicationCaption, List<string> keys,string applicationToLaunch="",int delay=0)
+        {
+            // Get a handle to the application. The window class
+            // and window name can be obtained using the Spy++ tool.
+            IntPtr applicationHandle;
+            while (true)
+            {
+
+                applicationHandle = FindWindow(applicationClass, applicationCaption);
+
+                // Verify that Application is a running process.
+                if (applicationHandle == IntPtr.Zero)
+                {
+                    if (applicationToLaunch.Length>0)
+                    {
+                        Process.Start(applicationToLaunch);
+                        Thread.Sleep(1000);
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show($"{applicationCaption} is not running.");
+                        return;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            // Make Application the foreground application and send it 
+            // a set of Keys.
+            SetForegroundWindow(applicationHandle);
+            foreach (var item in keys)
+            {
+                Thread.Sleep(delay);
+                SendKeys.SendWait(item);
+            }
         }
 
         /// <summary>
@@ -332,6 +419,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         /// <param name="sender">The source of the event.</param>
         /// <param name="e">The <see cref="RoutedEventArgs"/> instance containing the event data.</param>
         private void StartButton_Click(object sender, RoutedEventArgs e)
+        {
+            ListenForSpeech(sender,e);
+        }
+
+        private void ListenForSpeech(object sender, RoutedEventArgs e)
         {
             this._startButton.IsEnabled = false;
             this._radioGroup.IsEnabled = false;
@@ -548,7 +640,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         /// <param name="e">The <see cref="SpeechResponseEventArgs"/> instance containing the event data.</param>
         private void OnMicShortPhraseResponseReceivedHandler(object sender, SpeechResponseEventArgs e)
         {
-            Dispatcher.Invoke((Action)(() =>
+            Dispatcher.Invoke((System.Action)(() =>
             {
                 this.WriteLine("--- OnMicShortPhraseResponseReceivedHandler ---");
 
@@ -558,10 +650,85 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 this.micClient.EndMicAndRecognition();
 
                 this.WriteResponseResult(e);
+                if (e.PhraseResponse.Results.Length > 0)
+                {
 
+                    if (e.PhraseResponse.Results[0].LexicalForm == "microphone" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        this.WriteLine("*************Keys sent to toggle the microphone*****************");
+                        List<string> keys = new List<string>(new string[] { "^`" });
+                        SendKeysCustom(null, "Untitled - Notepad", keys, "Notepad.exe");
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm == "restart dragon" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        this.WriteLine("*************Restarting Dragon and Voice Computer*****************");
+                        var name = "Dragon Naturally speaking";
+                        KillAllProcesses(name);
+                        name = "Voice Computer";
+                        KillAllProcesses(name);
+                        List<string> keys = new List<string>(new string[] { "^%v" });
+                        SendKeysCustom(null, "Untitled - Notepad", keys, "Notepad.exe");
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm.StartsWith("launch ") && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        var name = e.PhraseResponse.Results[0].LexicalForm;
+                        name = name.Replace("launch ", "");
+                        var commandline = GetCommandLineFromLauncherName(name);
+                        try
+                        {
+                            Process.Start(commandline);
+                        }
+                        catch (Exception)
+                        {
+                            throw;
+                        }
+                        this.WriteLine($"*************Launching  {commandline} *****************");
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm.StartsWith("kill") && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        var name = e.PhraseResponse.Results[0].LexicalForm;
+                        name = name.Replace("kill", "");
+                        name = name.Trim();
+                        KillAllProcesses(name);
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm=="quit application" && e.PhraseResponse.RecognitionStatus==RecognitionStatus.RecognitionSuccess)
+                    {
+                        System.Windows.Application.Current.Shutdown();
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm=="list commands" && e.PhraseResponse.RecognitionStatus==RecognitionStatus.RecognitionSuccess)
+                    {
+                        ListCommands();
+                    }
+
+                }
                 _startButton.IsEnabled = true;
                 _radioGroup.IsEnabled = true;
             }));
+        }
+
+        private void ListCommands()
+        {
+            this.WriteLine($"Available Commands:");
+            this.WriteLine($"-------------------");
+            this.WriteLine($"Quit Application");
+            this.WriteLine($"Kill <application name>");
+            this.WriteLine($"Launch <application name>");
+            this.WriteLine($"Microphone");
+            this.WriteLine($"Restart Dragon");
+            this.WriteLine($"List Commands");
+            this.WriteLine($"-------------------");
+        }
+
+        private void KillAllProcesses(string name)
+        {
+            var processName = GetProcessNameFromApplicationsToKill(name);
+            if (processName.Length > 0)
+            {
+                foreach (var process in Process.GetProcessesByName(processName))
+                {
+                    process.Kill();
+                }
+            }
         }
 
         /// <summary>
@@ -571,7 +738,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         /// <param name="e">The <see cref="SpeechResponseEventArgs"/> instance containing the event data.</param>
         private void OnDataShortPhraseResponseReceivedHandler(object sender, SpeechResponseEventArgs e)
         {
-            Dispatcher.Invoke((Action)(() =>
+            Dispatcher.Invoke((System.Action)(() =>
             {
                 this.WriteLine("--- OnDataShortPhraseResponseReceivedHandler ---");
 
@@ -594,6 +761,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             if (e.PhraseResponse.Results.Length == 0)
             {
                 this.WriteLine("No phrase response is available.");
+                //dispatcherTimer.Stop();
             }
             else
             {
@@ -623,7 +791,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 e.PhraseResponse.RecognitionStatus == RecognitionStatus.DictationEndSilenceTimeout)
             { 
                 Dispatcher.Invoke(
-                    (Action)(() => 
+                    (System.Action)(() => 
                     {
                         // we got the final result, so it we can end the mic reco.  No need to do this
                         // for dataReco, since we already called endAudio() on it as soon as we were done
@@ -650,7 +818,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 e.PhraseResponse.RecognitionStatus == RecognitionStatus.DictationEndSilenceTimeout)
             {
                 Dispatcher.Invoke(
-                    (Action)(() => 
+                    (System.Action)(() => 
                     {
                         _startButton.IsEnabled = true;
                         _radioGroup.IsEnabled = true;
@@ -672,8 +840,51 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private void OnIntentHandler(object sender, SpeechIntentEventArgs e)
         {
             this.WriteLine("--- Intent received by OnIntentHandler() ---");
-            this.WriteLine("{0}", e.Payload);
+
+            LuisResult luisResult = new LuisResult();
+            JsonConvert.DefaultSettings = () => new JsonSerializerSettings()
+            {
+                ContractResolver = new CamelCasePropertyNamesContractResolver(),
+                Formatting = Newtonsoft.Json.Formatting.Indented,
+                NullValueHandling = NullValueHandling.Ignore,
+            };
+
+            var _Data = JsonConvert.DeserializeObject<MyLUIS>(e.Payload);
+            //luisResult = JsonConvert.DeserializeObject<LuisResult>(e.Payload);
+
+            if (_Data.intents.Count()>0)
+            {
+                this.WriteLine($"Intent: {_Data.intents[0].intent}");
+                if (_Data.entities.Count()>1)
+                {
+                    this.WriteLine($"Entities:{_Data.entities[0].entity} {_Data.entities[0].type} {_Data.entities[1].entity} {_Data.entities[1].type}  query: {_Data.query}");
+                }
+            }
             this.WriteLine();
+        }
+
+
+
+        public class MyLUIS
+        {
+            public string query { get; set; }
+            public lIntent[] intents { get; set; }
+            public lEntity[] entities { get; set; }
+        }
+
+        public class lIntent
+        {
+            public string intent { get; set; }
+            public float score { get; set; }
+        }
+
+        public class lEntity
+        {
+            public string entity { get; set; }
+            public string type { get; set; }
+            public int startIndex { get; set; }
+            public int endIndex { get; set; }
+            public float score { get; set; }
         }
 
         /// <summary>
@@ -683,9 +894,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         /// <param name="e">The <see cref="PartialSpeechResponseEventArgs"/> instance containing the event data.</param>
         private void OnPartialResponseReceivedHandler(object sender, PartialSpeechResponseEventArgs e)
         {
-            this.WriteLine("--- Partial result received by OnPartialResponseReceivedHandler() ---");
-            this.WriteLine("{0}", e.PartialResult);
-            this.WriteLine();
+            //this.WriteLine("--- Partial result received by OnPartialResponseReceivedHandler() ---");
+            //this.WriteLine("{0}", e.PartialResult);
+            Dispatcher.Invoke(() =>
+            {
+                Result.Text = (e.PartialResult);
+            });
+            //this.WriteLine();
         }
 
         /// <summary>
@@ -795,11 +1010,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             try
             {
                 SaveSubscriptionKeyToIsolatedStorage(this.SubscriptionKey);
-                MessageBox.Show("Subscription key is saved in your disk.\nYou do not need to paste the key next time.", "Subscription Key");
+                System.Windows.MessageBox.Show("Subscription key is saved in your disk.\nYou do not need to paste the key next time.", "Subscription Key");
             }
             catch (Exception exception)
             {
-                MessageBox.Show(
+                System.Windows.MessageBox.Show(
                     "Fail to save subscription key. Error message: " + exception.Message,
                     "Subscription Key", 
                     MessageBoxButton.OK, 
@@ -818,11 +1033,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 this.SubscriptionKey = DefaultSubscriptionKeyPromptMessage;
                 SaveSubscriptionKeyToIsolatedStorage(string.Empty);
-                MessageBox.Show("Subscription key is deleted from your disk.", "Subscription Key");
+                System.Windows.MessageBox.Show("Subscription key is deleted from your disk.", "Subscription Key");
             }
             catch (Exception exception)
             {
-                MessageBox.Show(
+                System.Windows.MessageBox.Show(
                     "Fail to delete subscription key. Error message: " + exception.Message,
                     "Subscription Key", 
                     MessageBoxButton.OK, 
@@ -869,5 +1084,58 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this._startButton.IsEnabled = true;
             this._radioGroup.IsEnabled = true;
         }
+
+        public string GetCommandLineFromLauncherName(string name)
+        {
+            using (var db=new MyDatabase())
+            {
+                var launcher = db.tblLaunchers.Where(l => l.Name.ToLower() == name).FirstOrDefault();
+
+                if (launcher!= null )
+                {
+                    return launcher.CommandLine; 
+                }
+                return "";
+            }
+        }
+
+        public string GetProcessNameFromApplicationsToKill(string name)
+        {
+            using (var db = new MyDatabase())
+            {
+                var applicationToKill = db.ApplicationsToKill.Where(k => k.CommandName.ToLower()==name).FirstOrDefault();
+                if (applicationToKill!= null )
+                {
+                    return applicationToKill.ProcessName;
+                }
+                return "";
+            }
+        }
+
+        public IEnumerable<CustomIntelliSense> GetCustomIntelliSenses(string language, string category)
+        {
+            using (var db=new MyDatabase())
+            {
+                var languageId = db.tblLanguages.Where(l => l.Language == language).FirstOrDefault()?.ID;
+                var categoryId = db.tblCategories.Where(c => c.Category == category).FirstOrDefault()?.MenuNumber;
+                IEnumerable<CustomIntelliSense> customIntelliSenses = db.tblCustomIntelliSenses.Where(c => c.Language_ID == languageId && c.Category_ID == categoryId);
+                if (customIntelliSenses!= null )
+                {
+                    return customIntelliSenses.ToList();
+                }
+                return null;
+            }
+        }
+
+        private void dispatcherTimer_Tick(object sender, EventArgs e)
+        {
+            if (this._startButton.IsEnabled == true)
+            {
+                ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
+                IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
+                invokeProvider.Invoke();
+            }
+        }
+
     }
 }
