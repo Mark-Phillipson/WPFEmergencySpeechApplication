@@ -1,3 +1,13 @@
+Changed so that if Dragon NaturallySpeaking fails I can call this application using Cortana and call following commands:
+
+            this.WriteLine($"Quit Application");
+            this.WriteLine($"Kill <application name>");
+            this.WriteLine($"Launch <application name>");
+            this.WriteLine($"Microphone");
+            this.WriteLine($"Restart Dragon");
+            this.WriteLine($"List Commands");
+
+
 # Samples for Microsoft C# speech client library
 
 This repository contains samples for transcribing speech to text using Microsoft Speech Service, an offering within [Microsoft Cognitive Services](https://azure.microsoft.com/services/cognitive-services/), formerly known as Project Oxford.
