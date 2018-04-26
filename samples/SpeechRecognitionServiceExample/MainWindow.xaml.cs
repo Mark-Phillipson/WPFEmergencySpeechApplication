@@ -357,7 +357,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
             dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
             dispatcherTimer.Tick += dispatcherTimer_Tick;
-            dispatcherTimer.Interval = new TimeSpan(0, 0, 5);
+            dispatcherTimer.Interval = new TimeSpan(0, 0, 1);
             dispatcherTimer.Start();
 
             ListCommands();
@@ -691,15 +691,74 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                         name = name.Trim();
                         KillAllProcesses(name);
                     }
-                    else if (e.PhraseResponse.Results[0].LexicalForm=="quit application" && e.PhraseResponse.RecognitionStatus==RecognitionStatus.RecognitionSuccess)
+                    else if (e.PhraseResponse.Results[0].LexicalForm == "quit application" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
                     {
                         System.Windows.Application.Current.Shutdown();
                     }
-                    else if (e.PhraseResponse.Results[0].LexicalForm=="list commands" && e.PhraseResponse.RecognitionStatus==RecognitionStatus.RecognitionSuccess)
+                    else if (e.PhraseResponse.Results[0].LexicalForm == "list commands" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
                     {
                         ListCommands();
                     }
+                    else if (e.PhraseResponse.Results[0].LexicalForm == "short phrase mode" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        this.IsMicrophoneClientShortPhrase = true;
+                        this.IsMicrophoneClientWithIntent = false;
+                        this.IsMicrophoneClientDictation = false;
+                        this.IsDataClientShortPhrase = false;
+                        this.IsDataClientWithIntent = false;
+                        this.IsDataClientDictation = false;
 
+                        // Set the default choice for the grou'p of checkbox.
+                        this._micIntentRadioButton.IsChecked = false;
+                        this._micDictationRadioButton.IsChecked = false;
+                        this._micRadioButton.IsChecked = true;
+                        ResetEverything();
+                        ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
+                        IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
+                        invokeProvider.Invoke();
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm == "long dictation mode" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        this.IsMicrophoneClientShortPhrase = false;
+                        this.IsMicrophoneClientWithIntent = false;
+                        this.IsMicrophoneClientDictation = true;
+                        this.IsDataClientShortPhrase = false;
+                        this.IsDataClientWithIntent = false;
+                        this.IsDataClientDictation = false;
+
+                        // Set the default choice for the grou'p of checkbox.
+                        this._micIntentRadioButton.IsChecked = false;
+                        this._micDictationRadioButton.IsChecked = true;
+                        this._micRadioButton.IsChecked = false;
+                        ResetEverything();
+                        ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
+                        IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
+                        invokeProvider.Invoke();
+
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm == "with intent mode" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        this.IsMicrophoneClientShortPhrase = false;
+                        this.IsMicrophoneClientWithIntent = true;
+                        this.IsMicrophoneClientDictation = false;
+                        this.IsDataClientShortPhrase = false;
+                        this.IsDataClientWithIntent = false;
+                        this.IsDataClientDictation = false;
+
+                        // Set the default choice for the grou'p of checkbox.
+                        this._micIntentRadioButton.IsChecked = true;
+                        this._micDictationRadioButton.IsChecked = false;
+                        this._micRadioButton.IsChecked = false;
+                        ResetEverything();
+                        ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
+                        IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
+                        invokeProvider.Invoke();
+                    }
+                    else if (e.PhraseResponse.Results[0].LexicalForm == "transfer to notepad" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                    {
+                        List<string> keys = new List<string>(new string[] { this.finalResult.Text });
+                        SendKeysCustom(null, "Untitled - Notepad", keys, "Notepad.exe");
+                    }
                 }
                 _startButton.IsEnabled = true;
                 _radioGroup.IsEnabled = true;
@@ -715,6 +774,10 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this.WriteLine($"Launch <application name>");
             this.WriteLine($"Microphone");
             this.WriteLine($"Restart Dragon");
+            this.WriteLine($"with intent mode");
+            this.WriteLine($"short phrase mode");
+            this.WriteLine($"long dictation mode");
+            this.WriteLine($"transfer to notepad");
             this.WriteLine($"List Commands");
             this.WriteLine($"-------------------");
         }
@@ -774,6 +837,16 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                         e.PhraseResponse.Results[i].Confidence,
                         e.PhraseResponse.Results[i].DisplayText);
                 }
+                if (e.PhraseResponse.Results[0].Confidence==Confidence.High)
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        if (e.PhraseResponse.Results[0].LexicalForm!="transfer to notepad")
+                        {
+                            finalResult.Text = (e.PhraseResponse.Results[0].DisplayText);
+                        }
+                    });
+                }
 
                 this.WriteLine();
             }
@@ -797,7 +870,6 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                         // for dataReco, since we already called endAudio() on it as soon as we were done
                         // sending all the data.
                         this.micClient.EndMicAndRecognition();
-
                         this._startButton.IsEnabled = true;
                         this._radioGroup.IsEnabled = true;
                     }));                
@@ -1067,6 +1139,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private void RadioButton_Click(object sender, RoutedEventArgs e)
         {
             // Reset everything
+            ResetEverything();
+        }
+
+        private void ResetEverything()
+        {
             if (this.micClient != null)
             {
                 this.micClient.EndMicAndRecognition();
@@ -1137,5 +1214,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
         }
 
+        private void _micDictationRadioButton_Checked(object sender, RoutedEventArgs e)
+        {
+
+        }
     }
 }
