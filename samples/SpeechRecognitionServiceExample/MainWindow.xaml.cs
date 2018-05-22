@@ -1,4 +1,4 @@
-﻿// <copyright file="MainWindow.xaml.cs" company="Microsoft">
+﻿//   ??? <copyright file="MainWindow.xaml.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 //
@@ -78,7 +78,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         private SpeechRecognitionEngine speechRecognitionEngine = new SpeechRecognitionEngine();
         private SpeechSynthesizer SpeechSynthesizer = new SpeechSynthesizer();
-
+        private SpeechResponseEventArgs lastResult = null;
         /// <summary>
         /// The isolated storage subscription key file name.
         /// </summary>
@@ -170,8 +170,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 this.WriteLine("*************Restarting Dragon and Voice Computer*****************");
                 var name = "Dragon Naturally speaking";
                 KillAllProcesses(name);
-                //name = "Voice Computer";
-                //KillAllProcesses(name);
+
+                name = "Dragonbar";
+                KillAllProcesses(name);
+                name = "Command Browser";
+                KillAllProcesses(name);
                 name = "KnowBrainer";
                 KillAllProcesses(name);
                 try
@@ -226,6 +229,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "short phrase mode" && e.Result.Confidence > 0.5)
             {
+                speechRecognitionEngine.UnloadAllGrammars();
                 speechRecognitionEngine.RecognizeAsyncStop();
 
                 this.IsMicrophoneClientShortPhrase = true;
@@ -243,7 +247,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
                 IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
                 invokeProvider.Invoke();
-                dispatcherTimer.Interval = new TimeSpan(0, 0, 0,0,100); 
+                dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
                 dispatcherTimer.Start();
                 Dispatcher.Invoke(() =>
                 {
@@ -254,18 +258,37 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 this.WriteCommandLine("Grammar Mode");
                 this.WriteCommandLine("Transfer to Notepad");
                 this.WriteCommandLine("Transfer as Paragraph");
+                
                 Choices choices = new Choices();
                 choices.Add("Grammar Mode");
                 choices.Add("Transfer to Notepad");
                 choices.Add("Transfer as Paragraph");
+                for (int i = 0; i < 6; i++)
+                {
+                    choices.Add($"Choose {i}");
+                    this.WriteCommandLine($"Choose {i}");
+                }
                 this.WriteCommandLine($"-------------------");
                 Grammar grammar = new Grammar(new GrammarBuilder(choices));
                 speechRecognitionEngine.LoadGrammarAsync(grammar);
                 speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
             }
+            else if (e.Result.Text.ToLower().StartsWith("choose ")  && lastResult!= null )
+            {
+                var choiceNumber = Int32.Parse(e.Result.Text.Substring(7));
+                //Dispatcher.Invoke(() =>
+                //{
+                //    Commands.Text = "";
+                //});
+                //ListCommands();
+                if (choiceNumber<=(lastResult.PhraseResponse.Results.Length-1))
+                {
+                    Dispatcher.Invoke(() => { finalResult.Text = lastResult.PhraseResponse.Results[choiceNumber].DisplayText; });
+                }
+            }
             else if (e.Result.Text.ToLower() == "transfer as paragraph" && e.Result.Confidence > 0.5)
             {
-                if (this.TransferAsParagraph.IsChecked==false)
+                if (this.TransferAsParagraph.IsChecked == false)
                 {
                     Dispatcher.Invoke(() => { TransferAsParagraph.IsChecked = true; });
                 }
@@ -921,40 +944,40 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 this.micClient.EndMicAndRecognition();
 
                 this.WriteResponseResult(e);
-                if (e.PhraseResponse.Results.Length > 0)
-                {
+            if (e.PhraseResponse.Results.Length > 0)
+            {
 
-                    if (e.PhraseResponse.Results[0].LexicalForm.StartsWith("launch ") && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
-                    {
-                        var name = e.PhraseResponse.Results[0].LexicalForm;
-                        name = name.Replace("launch ", "");
-                        var commandline = GetCommandLineFromLauncherName(name);
-                        if (commandline != null && commandline.Length > 0)
-                        {
-                            try
-                            {
-                                Process.Start(commandline);
-                            }
-                            catch (Exception exception)
-                            {
-                                this.WriteLine($"*************Failed to Launch {commandline} *****************");
-                                this.WriteLine(exception.Message);
-                            }
-                            this.WriteLine($"*************Launching  {commandline} *****************");
+                //if (e.PhraseResponse.Results[0].LexicalForm.StartsWith("launch ") && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                //{
+                //    var name = e.PhraseResponse.Results[0].LexicalForm;
+                //    name = name.Replace("launch ", "");
+                //    var commandline = GetCommandLineFromLauncherName(name);
+                //    if (commandline != null && commandline.Length > 0)
+                //    {
+                //        try
+                //        {
+                //            Process.Start(commandline);
+                //        }
+                //        catch (Exception exception)
+                //        {
+                //            this.WriteLine($"*************Failed to Launch {commandline} *****************");
+                //            this.WriteLine(exception.Message);
+                //        }
+                //        this.WriteLine($"*************Launching  {commandline} *****************");
 
-                        }
-                    }
+                //    }
+                //}
 
 
 
-                    //else if (globalIntelliSenseOn == true && languageMatched != null && categoryMatched != null)
-                    //{
-                    //    PerformGlobalIntelliSense(e);
-                    //}
-                    //else
-                    //{
-                    //    MatchLanguageAndCategory(e);
-                    //}
+                //else if (globalIntelliSenseOn == true && languageMatched != null && categoryMatched != null)
+                //{
+                //    PerformGlobalIntelliSense(e);
+                //}
+                //else
+                //{
+                //    MatchLanguageAndCategory(e);
+                //}
                 }
                 _startButton.IsEnabled = true;
                 _radioGroup.IsEnabled = true;
@@ -1133,30 +1156,37 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 this.WriteLine("No phrase response is available.");
                 //dispatcherTimer.Stop();
+                lastResult = null;
             }
             else
             {
-                this.WriteLine("********* Final n-BEST Results *********");
-                for (int i = 0; i < e.PhraseResponse.Results.Length; i++)
+                if (!e.PhraseResponse.Results[0].LexicalForm.StartsWith("choose ") && e.PhraseResponse.Results[0].LexicalForm!="transfer to notepad")
                 {
-                    this.WriteLine(
-                        "[{0}] Confidence={1}, Text=\"{2}\"", 
-                        i, 
-                        e.PhraseResponse.Results[i].Confidence,
-                        e.PhraseResponse.Results[i].DisplayText);
-                }
+                    Dispatcher.Invoke(() => {
+                        var position = Commands.Text.IndexOf("********* Final n-BEST Results *********");
+                        if (position>0)
+                        {
+                            Commands.Text = Commands.Text.Substring(0, (position ));
+                        }
+                    });
+                    lastResult = e;
+                    this.WriteCommandLine("********* Final n-BEST Results *********");
+                    for (int i = 0; i < e.PhraseResponse.Results.Length; i++)
+                    {
+                        this.WriteCommandLine(
+                            "[Choose {0}] Confidence={1}, Text=\"{2}\"", 
+                            i, 
+                            e.PhraseResponse.Results[i].Confidence,
+                            e.PhraseResponse.Results[i].DisplayText);
+                    }
                 if (e.PhraseResponse.Results[0].Confidence!=Confidence.Low)
                 {
                     Dispatcher.Invoke(() =>
                     {
-                        if (e.PhraseResponse.Results[0].LexicalForm!="transfer to notepad")
-                        {
                             finalResult.Text = (e.PhraseResponse.Results[0].DisplayText);
-                        }
                     });
                 }
-
-                this.WriteLine();
+                }
             }
         }
 
