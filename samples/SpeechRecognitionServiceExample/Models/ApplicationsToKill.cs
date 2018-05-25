@@ -18,5 +18,7 @@ namespace SpeechToTextWPFSample.Models
 
         [Required]
         public string CommandName { get; set; }
+
+        public bool Display { get; set; }
     }
 }

@@ -162,7 +162,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             if (e.Result.Text.ToLower() == "microphone" && e.Result.Confidence > 0.5)
             {
                 this.WriteLine("*************Keys sent to toggle the microphone*****************");
-                List<string> keys = new List<string>(new string[] { "^`" });
+                List<string> keys = new List<string>(new string[] { "{ADD}" });
                 SendKeysCustom(null, "Untitled - Notepad", keys, "notepad", "Notepad.exe");
             }
             else if (e.Result.Text.ToLower() == "restart dragon" && e.Result.Confidence > 0.5)
@@ -229,6 +229,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "short phrase mode" && e.Result.Confidence > 0.5)
             {
+                //Send Dragon to sleep
+                this.WriteLine("*************Key sent to sleep the microphone*****************");
+                List<string> keys = new List<string>(new string[] { "{DIVIDE}" });
+                SendKeysCustom(null, "Untitled - Notepad", keys, "notepad", "Notepad.exe");
+
                 speechRecognitionEngine.UnloadAllGrammars();
                 speechRecognitionEngine.RecognizeAsyncStop();
 
@@ -239,11 +244,12 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 this.IsDataClientWithIntent = false;
                 this.IsDataClientDictation = false;
 
-                // Set the default choice for the grou'p of checkbox.
+                // Set the default choice for the group of checkbox.
                 this._micIntentRadioButton.IsChecked = false;
                 this._micDictationRadioButton.IsChecked = false;
                 this._micRadioButton.IsChecked = true;
                 ResetEverything();
+                //Click the button
                 ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
                 IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
                 invokeProvider.Invoke();
@@ -1097,7 +1103,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         {
             using (var db = new MyDatabase())
             {
-                var applicationsToKill = db.ApplicationsToKill.OrderBy(k => k.CommandName).ToList();
+                var applicationsToKill = db.ApplicationsToKill.Where(k => k.Display==true).OrderBy(k => k.CommandName).ToList();
                 foreach (var application in applicationsToKill)
                 {
                     choices.Add($"kill {application.CommandName}");

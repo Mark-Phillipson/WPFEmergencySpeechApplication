@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" mc:Ignorable="d" x:Class="Microsoft.CognitiveServices.SpeechRecognition.MainWindow"
         x:Name="_mainWindow"
-        Title="Microsoft.CognitiveServices.SpeechRecognition Example" Margin="5,5,5,5" MinWidth="800" Background="Black" Foreground="White" Height="777" d:DesignWidth="1020">
+        Title="Emergency Speech Application" Margin="5,5,5,5" MinWidth="800" Background="Black" Foreground="White" Height="777" d:DesignWidth="1020">
     <Window.Resources>
         <SolidColorBrush x:Key="BrushWhite" Color="White"/>
         <SolidColorBrush x:Key="BrushBlack" Color="Black"/>
@@ -18,7 +18,7 @@
             <ColumnDefinition Width="23*"/>
             <ColumnDefinition Width="375*" MinWidth="200"/>
         </Grid.ColumnDefinitions>
-        <Label Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" Foreground="White" Content="Project Cognitive Services Speech To Text Sample"/>
+        <Label Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" Foreground="White" Content="For when Dragon stops responding say Restart Dragon"/>
         <Grid Grid.Row="0" Grid.Column="2" Margin="0,0,10,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <TextBox Background="Black" Foreground="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="2" Text="{Binding SubscriptionKey, ElementName=_mainWindow, Mode=TwoWay}"/>
@@ -56,7 +56,6 @@
                 </Grid.ColumnDefinitions>
 
                 <Button x:Name="_startButton" Background="black"    Foreground="White" Grid.Column="0" Content="Start _Recognition" Click="StartButton_Click" Margin="5" Padding="5"/>
-                <Button x:Name="_button1" Background="black"    Foreground="White" Grid.Column="3" Content="Test Send Keys" Click="button1_Click" Margin="5" Padding="5"/>
             </Grid>
             <Grid HorizontalAlignment="Stretch" Margin="10,10,10,31" Grid.Row="2" VerticalAlignment="Stretch">
                 <Grid.RowDefinitions>
