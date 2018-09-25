@@ -72,6 +72,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         [DllImport("USER32.DLL")]
         public static extern bool SetForegroundWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll")]
+        public static extern IntPtr GetWindowThreadProcessId(IntPtr hWnd, out uint ProcessId);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+
         private string languageMatched;
         private string categoryMatched;
         private bool languageAndCategoryAlreadyMatched = false;
@@ -106,7 +113,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private MicrophoneRecognitionClient micClient;
 
         private System.Windows.Threading.DispatcherTimer dispatcherTimer;
-
+        Process currentProcess;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainWindow"/> class.
@@ -151,6 +158,65 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
             speechRecognitionEngine.LoadGrammarAsync(grammar);
         }
+        private void LoadGrammarKeyboard()
+        {
+            //dispatcherTimer.Stop();
+
+            Choices choices = new Choices();
+            this.WriteCommandLine($"Keyboard");
+            AddChoiceAndWriteCommandline(choices,"Press Alpha");
+            AddChoiceAndWriteCommandline(choices,"Press Bravo");
+            AddChoiceAndWriteCommandline(choices,"Press Charlie");
+            AddChoiceAndWriteCommandline(choices,"Press Delta");
+            AddChoiceAndWriteCommandline(choices,"Press Echo");
+            AddChoiceAndWriteCommandline(choices,"Press Foxtrot");
+            AddChoiceAndWriteCommandline(choices,"Press Golf");
+            AddChoiceAndWriteCommandline(choices,"Press Hotel");
+            AddChoiceAndWriteCommandline(choices,"Press India");
+            AddChoiceAndWriteCommandline(choices,"Press Juliet");
+            AddChoiceAndWriteCommandline(choices,"Press Kilo");
+            AddChoiceAndWriteCommandline(choices,"Press Lima");
+            AddChoiceAndWriteCommandline(choices,"Press Mike");
+            AddChoiceAndWriteCommandline(choices,"Press November");
+            AddChoiceAndWriteCommandline(choices,"Press Oscar");
+            AddChoiceAndWriteCommandline(choices,"Press Papa");
+            AddChoiceAndWriteCommandline(choices,"Press Qubec");
+            AddChoiceAndWriteCommandline(choices,"Press Romeo");
+            AddChoiceAndWriteCommandline(choices,"Press Sierra");
+            AddChoiceAndWriteCommandline(choices,"Press Tango");
+            AddChoiceAndWriteCommandline(choices,"Press Uniform");
+            AddChoiceAndWriteCommandline(choices,"Press Victor");
+            AddChoiceAndWriteCommandline(choices,"Press Whiskey");
+            AddChoiceAndWriteCommandline(choices,"Press X-ray");
+            AddChoiceAndWriteCommandline(choices,"Press Yankee");
+            AddChoiceAndWriteCommandline(choices,"Press Zulu");
+            AddChoiceAndWriteCommandline(choices,"Press Down");
+            AddChoiceAndWriteCommandline(choices,"Press Up");
+            AddChoiceAndWriteCommandline(choices,"Press Left");
+            AddChoiceAndWriteCommandline(choices,"Press Right");
+            AddChoiceAndWriteCommandline(choices,"Press Enter");
+            AddChoiceAndWriteCommandline(choices,"Press Backspace");
+
+
+
+            choices.Add("Stop Keyboard");
+            this.WriteCommandLine("Stop Keyboard");
+            Grammar grammar = new Grammar(new GrammarBuilder(choices));
+            speechRecognitionEngine.LoadGrammarAsync(grammar);
+
+            IntPtr hwnd = GetForegroundWindow();
+            uint pid;
+            GetWindowThreadProcessId(hwnd, out pid);
+            currentProcess = Process.GetProcessById((int)pid);
+            this.WriteLine($"****Current Process: {currentProcess.ProcessName}****");
+            //p.MainModule.FileName.Dump();
+        }
+
+        private void AddChoiceAndWriteCommandline(Choices choices,string phrase)
+        {
+            choices.Add(phrase);
+            this.WriteCommandLine(phrase);
+        }
 
         private void SpeechRecognitionEngine_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
@@ -158,8 +224,52 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 Result.Text = ($"Recognised: {e.Result.Text}");
             });
-
-            if (e.Result.Text.ToLower() == "microphone" && e.Result.Confidence > 0.5)
+            if (e.Result.Text.ToLower() == "keyboard" && e.Result.Confidence > 0.5)
+            {
+                this.WriteLine($"Keyboard mode...");
+                speechRecognitionEngine.UnloadAllGrammars();
+                Dispatcher.Invoke(() =>
+                {
+                    Commands.Text = "";
+                });
+                LoadGrammarKeyboard();
+            }
+            else if (e.Result.Text.ToLower().StartsWith("press ") && e.Result.Confidence > 0.5)
+            {
+                var value = "";
+                this.WriteLine($"*************{e.Result.Text}*****************");
+                if (e.Result.Text=="Press Down")
+                {
+                    value = "{Down}";
+                }
+                else if (e.Result.Text=="Press Up")
+                {
+                    value = "{Up}";
+                }
+                else if (e.Result.Text=="Press Left")
+                {
+                    value = "{Left}";
+                }
+                else if (e.Result.Text=="Press Right")
+                {
+                    value = "{Right}";
+                }
+                else if (e.Result.Text=="Press Enter")
+                {
+                    value = "{Enter}";
+                }
+                else if (e.Result.Text=="Press Backspace")
+                {
+                    value = "{Backspace}";
+                }
+                else
+                {
+                    value = e.Result.Text.Substring(e.Result.Text.IndexOf(" ") + 1, 1);
+                }
+                List<string> keys = new List<string>(new string[] { value });
+                SendKeysCustom(null,  null , keys, currentProcess.ProcessName);
+            }
+            else if (e.Result.Text.ToLower() == "microphone" && e.Result.Confidence > 0.5)
             {
                 this.WriteLine("*************Keys sent to toggle the microphone*****************");
                 List<string> keys = new List<string>(new string[] { "{ADD}" });
@@ -193,7 +303,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
                     else
                     {
-                        List<string> keysKB = new List<string>(new string[] { "^%k" });
+                        List<string> keysKB = new List<string>(new string[] { "^+k" });
                         SendKeysCustom(null, "Untitled - Notepad", keysKB, "notepad", "Notepad.exe");
 
                     }
@@ -264,7 +374,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 this.WriteCommandLine("Grammar Mode");
                 this.WriteCommandLine("Transfer to Notepad");
                 this.WriteCommandLine("Transfer as Paragraph");
-                
+
                 Choices choices = new Choices();
                 choices.Add("Grammar Mode");
                 choices.Add("Transfer to Notepad");
@@ -279,7 +389,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 speechRecognitionEngine.LoadGrammarAsync(grammar);
                 speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
             }
-            else if (e.Result.Text.ToLower().StartsWith("choose ")  && lastResult!= null )
+            else if (e.Result.Text.ToLower().StartsWith("choose ") && lastResult != null)
             {
                 var choiceNumber = Int32.Parse(e.Result.Text.Substring(7));
                 //Dispatcher.Invoke(() =>
@@ -287,7 +397,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 //    Commands.Text = "";
                 //});
                 //ListCommands();
-                if (choiceNumber<=(lastResult.PhraseResponse.Results.Length-1))
+                if (choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1))
                 {
                     Dispatcher.Invoke(() => { finalResult.Text = lastResult.PhraseResponse.Results[choiceNumber].DisplayText; });
                 }
@@ -381,7 +491,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 //speechRecognitionEngine.SetInputToDefaultAudioDevice();
                 //speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
             }
-            else if (e.Result.Text == "Stop IntelliSense")
+            else if (e.Result.Text == "Stop IntelliSense" || e.Result.Text=="Stop Keyboard")
             {
                 speechRecognitionEngine.RecognizeAsyncCancel();
                 ListCommands();
@@ -669,11 +779,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         {
             // Get a handle to the application. The window class
             // and window name can be obtained using the Spy++ tool.
-            IntPtr applicationHandle;
+            IntPtr applicationHandle=IntPtr.Zero;
             while (true)
             {
-
-                applicationHandle = FindWindow(applicationClass, applicationCaption);
+                if (applicationClass!= null  || applicationCaption!= null )
+                {
+                    applicationHandle = FindWindow(applicationClass, applicationCaption);
+                }
 
                 // Verify that Application is a running process.
                 if (applicationHandle == IntPtr.Zero)
@@ -686,7 +798,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     else
                     {
                  //       System.Windows.MessageBox.Show($"{applicationCaption} is not running.");
-                        ActivateApp(processName);
+                        //ActivateApp(processName);
+                        Process process = Process.GetProcessesByName(processName)[0];
+                        applicationHandle = process.Handle;
                         break;
                     }
                 }
@@ -1091,6 +1205,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             choices.Add("Long Dictation Mode");
             this.WriteCommandLine($"global intellisense");
             choices.Add("Global IntelliSense");
+            this.WriteCommandLine($"Keyboard");
+            choices.Add("Keyboard");
             this.WriteCommandLine($"List Commands");
             choices.Add("List Commands");
             this.WriteCommandLine($"-------------------");

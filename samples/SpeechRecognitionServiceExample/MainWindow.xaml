@@ -20,7 +20,7 @@
         </Grid.ColumnDefinitions>
         <Label Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" Foreground="White" Content="For when Dragon stops responding say Restart Dragon"/>
         <Grid Grid.Row="0" Grid.Column="2" Margin="0,0,10,0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <StackPanel Visibility="Hidden" Orientation="Horizontal" HorizontalAlignment="Right">
                 <TextBox Background="Black" Foreground="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="2" Text="{Binding SubscriptionKey, ElementName=_mainWindow, Mode=TwoWay}"/>
                 <Button Margin="5, 0, 0, 0" Padding="5, 0, 5, 0" Height="30" VerticalAlignment="Top" Background="black"    Foreground="White" Click="SaveKey_Click" Content="Save Key"/>
                 <Button Margin="5, 0, 0, 0" Padding="5, 0, 5, 0" Background="black"    Foreground="White" Click="DeleteKey_Click" Content="Delete Key"/>
@@ -35,8 +35,8 @@
                 <RowDefinition Height="253*"/>
                 <RowDefinition Height="auto"/>
             </Grid.RowDefinitions>
-            <GroupBox x:Name="_radioGroup" Grid.Row="0" Margin="10" Padding="0, 0, 10, 10" Opacity="0.3"   >
-                <StackPanel Orientation="Vertical" Margin="0,0,-174,0">
+            <GroupBox Visibility="Hidden" x:Name="_radioGroup" Grid.Row="0" Margin="10" Padding="0, 0, 10, 10" Opacity="0.3"   >
+                <StackPanel Visibility="Hidden" Orientation="Vertical" Margin="0,0,-174,0">
                     <Label Foreground="White" Content="Speech Recognition Source:" Margin="0,0,170,0"/>
                     <RadioButton x:Name="_micRadioButton" Foreground="White" IsChecked="{Binding IsMicrophoneClientShortPhrase, ElementName=_mainWindow}" Margin="10,10,180,0" Click="RadioButton_Click" Content="Use Microphone with ShortPhrase mode"/>
                     <RadioButton x:Name="_micDictationRadioButton" Foreground="White" IsChecked="{Binding IsMicrophoneClientDictation, ElementName=_mainWindow}" Margin="10,10,170,0" Click="RadioButton_Click"
