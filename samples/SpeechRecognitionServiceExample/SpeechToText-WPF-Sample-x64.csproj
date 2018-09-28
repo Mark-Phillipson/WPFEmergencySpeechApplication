@@ -56,6 +56,7 @@
     <Compile Include="Models\tblLauncher.cs" />
     <Compile Include="Models\tblMultipleLauncher.cs" />
     <Compile Include="Models\Values_to_Insert.cs" />
+    <Compile Include="Modifier.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -106,6 +107,7 @@
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.Speech" />

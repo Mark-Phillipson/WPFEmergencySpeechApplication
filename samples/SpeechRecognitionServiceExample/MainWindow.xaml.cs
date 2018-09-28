@@ -1,4 +1,6 @@
-﻿//   ??? <copyright file="MainWindow.xaml.cs" company="Microsoft">
+﻿//SpeechRecognitionEngine_SpeechRecognized does the main stuff of recognising commands
+// LoadGrammarKeyboard 
+//   ??? <copyright file="MainWindow.xaml.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
 //
@@ -57,7 +59,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
     using System.Speech.Recognition;
     using System.Speech.Synthesis;
     using System.Threading.Tasks;
-
+    using System.Drawing;
+    using SpeechToTextWPFSample;
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -114,6 +117,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         private System.Windows.Threading.DispatcherTimer dispatcherTimer;
         Process currentProcess;
+        private bool isKeyboard=false;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainWindow"/> class.
@@ -161,55 +165,156 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private void LoadGrammarKeyboard()
         {
             //dispatcherTimer.Stop();
-
+            List<string> phoneticAlphabet = new List<string> { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Qubec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu" };
             Choices choices = new Choices();
-            this.WriteCommandLine($"Keyboard");
-            AddChoiceAndWriteCommandline(choices,"Press Alpha");
-            AddChoiceAndWriteCommandline(choices,"Press Bravo");
-            AddChoiceAndWriteCommandline(choices,"Press Charlie");
-            AddChoiceAndWriteCommandline(choices,"Press Delta");
-            AddChoiceAndWriteCommandline(choices,"Press Echo");
-            AddChoiceAndWriteCommandline(choices,"Press Foxtrot");
-            AddChoiceAndWriteCommandline(choices,"Press Golf");
-            AddChoiceAndWriteCommandline(choices,"Press Hotel");
-            AddChoiceAndWriteCommandline(choices,"Press India");
-            AddChoiceAndWriteCommandline(choices,"Press Juliet");
-            AddChoiceAndWriteCommandline(choices,"Press Kilo");
-            AddChoiceAndWriteCommandline(choices,"Press Lima");
-            AddChoiceAndWriteCommandline(choices,"Press Mike");
-            AddChoiceAndWriteCommandline(choices,"Press November");
-            AddChoiceAndWriteCommandline(choices,"Press Oscar");
-            AddChoiceAndWriteCommandline(choices,"Press Papa");
-            AddChoiceAndWriteCommandline(choices,"Press Qubec");
-            AddChoiceAndWriteCommandline(choices,"Press Romeo");
-            AddChoiceAndWriteCommandline(choices,"Press Sierra");
-            AddChoiceAndWriteCommandline(choices,"Press Tango");
-            AddChoiceAndWriteCommandline(choices,"Press Uniform");
-            AddChoiceAndWriteCommandline(choices,"Press Victor");
-            AddChoiceAndWriteCommandline(choices,"Press Whiskey");
-            AddChoiceAndWriteCommandline(choices,"Press X-ray");
-            AddChoiceAndWriteCommandline(choices,"Press Yankee");
-            AddChoiceAndWriteCommandline(choices,"Press Zulu");
-            AddChoiceAndWriteCommandline(choices,"Press Down");
-            AddChoiceAndWriteCommandline(choices,"Press Up");
-            AddChoiceAndWriteCommandline(choices,"Press Left");
-            AddChoiceAndWriteCommandline(choices,"Press Right");
-            AddChoiceAndWriteCommandline(choices,"Press Enter");
-            AddChoiceAndWriteCommandline(choices,"Press Backspace");
+            this.WriteCommandLine($"Keyboard Commands:");
+            this.WriteCommandLine("Press Alpha-Zulu");
+            foreach (var item in phoneticAlphabet)
+            {
+                choices.Add($"Press {item}");
+            }
+            this.WriteCommandLine("Press 1-9");
+            AddChoiceAndWriteCommandline(choices, "Press Zero");
+            for (int i = 1; i < 10; i++)
+            {
+                choices.Add($"Press {i}");
+            }
+            this.WriteCommandLine("Press Control Alpha-Zulu");
+            this.WriteCommandLine("Press Alt Alpha-Zulu");
+            this.WriteCommandLine("Press Shift Alpha-Zulu");
+            Modifier modifier = new Modifier();
+            List<Modifier> modifiers = modifier.GetModifiers();
+            foreach (var modifier1 in modifiers)
+            {
+                foreach (var item in phoneticAlphabet)
+                {
+                    choices.Add($"Press {modifier1.ModifierName} {item}");
+                }
+            }
+            var mod = modifiers[0];
+            foreach (var otherModifier in modifiers)
+            {
+                if (otherModifier.ModifierName != mod.ModifierName)
+                {
+                    foreach (var item in phoneticAlphabet)
+                    {
+                        choices.Add($"Press {mod.ModifierName} {otherModifier.ModifierName} {item}");
+                    }
+                }
+            }
+            mod = modifiers[1];
+            foreach (var otherModifier in modifiers)
+            {
+                if (otherModifier.ModifierName != mod.ModifierName)
+                {
+                    foreach (var item in phoneticAlphabet)
+                    {
+                        choices.Add($"Press {mod.ModifierName} {otherModifier.ModifierName} {item}");
+                    }
+                }
+            }
+            mod = modifiers[2];
+            foreach (var otherModifier in modifiers)
+            {
+                if (otherModifier.ModifierName != mod.ModifierName)
+                {
+                    foreach (var item in phoneticAlphabet)
+                    {
+                        choices.Add($"Press {mod.ModifierName} {otherModifier.ModifierName} {item}");
+                    }
+                }
+            }
+
+            AddChoiceAndWriteCommandline(choices, "Press Down");
+            AddChoiceAndWriteCommandline(choices, "Press Up");
+            AddChoiceAndWriteCommandline(choices, "Press Left");
+            AddChoiceAndWriteCommandline(choices, "Press Right");
+            AddChoiceAndWriteCommandline(choices, "Press Enter");
+            AddChoiceAndWriteCommandline(choices, "Press Backspace");
+            AddChoiceAndWriteCommandline(choices, "Press Alt Tab");
+            AddChoiceAndWriteCommandline(choices, "Press Tab");
+            AddChoiceAndWriteCommandline(choices, "Press Shift Tab");
+            AddChoiceAndWriteCommandline(choices, "Press Escape");
+            AddChoiceAndWriteCommandline(choices, "Press Delete");
+            AddChoiceAndWriteCommandline(choices, "Press Space");
+            AddChoiceAndWriteCommandline(choices, "Press Alt Space");
+            AddChoiceAndWriteCommandline(choices, "Press Home");
+            AddChoiceAndWriteCommandline(choices, "Press Control Home");
+            AddChoiceAndWriteCommandline(choices, "Press Control Shift Home");
+            AddChoiceAndWriteCommandline(choices, "Press End");
+            AddChoiceAndWriteCommandline(choices, "Press Control End");
+            AddChoiceAndWriteCommandline(choices, "Press Control Shift End");
+            AddChoiceAndWriteCommandline(choices, "Press Page Down");
+            AddChoiceAndWriteCommandline(choices, "Press Page Up");
+            AddChoiceAndWriteCommandline(choices, "Press Hyphen");
+            AddChoiceAndWriteCommandline(choices, "Press _");
 
 
+            this.WriteCommandLine("Press Function 1-12");
+            for (int i = 1; i < 13; i++)
+            {
+                choices.Add($"Press Function {i}");
+            }
+            foreach (var item in modifiers)
+            {
+                for (int i = 1; i < 13; i++)
+                {
+                    choices.Add($"Press {item.ModifierName} Function {i}");
+                }
+                choices.Add($"Press {item.ModifierName} Page Down");
+                choices.Add($"Press {item.ModifierName} Page Up");
+            }            
+
+            mod = modifiers[0];
+            foreach (var otherModifier in modifiers)
+            {
+                if (otherModifier.ModifierName != mod.ModifierName)
+                {
+                    for (int i = 1; i < 13; i++)
+                    {
+                        choices.Add($"Press {mod.ModifierName} {otherModifier.ModifierName} Function {i}");
+                    }
+                }
+            }
+
+            mod = modifiers[1];
+            foreach (var otherModifier in modifiers)
+            {
+                if (otherModifier.ModifierName != mod.ModifierName)
+                {
+                    for (int i = 1; i < 13; i++)
+                    {
+                        choices.Add($"Press {mod.ModifierName} {otherModifier.ModifierName} Function {i}");
+                    }
+                }
+            }
+            mod = modifiers[2];
+            foreach (var otherModifier in modifiers)
+            {
+                if (otherModifier.ModifierName != mod.ModifierName)
+                {
+                    for (int i = 1; i < 13; i++)
+                    {
+                        choices.Add($"Press {mod.ModifierName} {otherModifier.ModifierName} Function {i}");
+                    }
+                }
+            }
 
             choices.Add("Stop Keyboard");
             this.WriteCommandLine("Stop Keyboard");
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
             speechRecognitionEngine.LoadGrammarAsync(grammar);
 
+            UpdateCurrentProcess();
+        }
+
+        private void UpdateCurrentProcess()
+        {
             IntPtr hwnd = GetForegroundWindow();
             uint pid;
             GetWindowThreadProcessId(hwnd, out pid);
             currentProcess = Process.GetProcessById((int)pid);
             this.WriteLine($"****Current Process: {currentProcess.ProcessName}****");
-            //p.MainModule.FileName.Dump();
         }
 
         private void AddChoiceAndWriteCommandline(Choices choices,string phrase)
@@ -217,9 +322,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             choices.Add(phrase);
             this.WriteCommandLine(phrase);
         }
-
         private void SpeechRecognitionEngine_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
+            UpdateCurrentProcess();
             Dispatcher.Invoke(() =>
             {
                 Result.Text = ($"Recognised: {e.Result.Text}");
@@ -227,6 +332,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             if (e.Result.Text.ToLower() == "keyboard" && e.Result.Confidence > 0.5)
             {
                 this.WriteLine($"Keyboard mode...");
+                isKeyboard = true;
                 speechRecognitionEngine.UnloadAllGrammars();
                 Dispatcher.Invoke(() =>
                 {
@@ -234,49 +340,79 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 });
                 LoadGrammarKeyboard();
             }
-            else if (e.Result.Text.ToLower().StartsWith("press ") && e.Result.Confidence > 0.5)
+            else if (e.Result.Text.ToLower().StartsWith("press ") && e.Result.Confidence > 0.5 && isKeyboard == true)
             {
+                UpdateCurrentProcess();
                 var value = "";
-                this.WriteLine($"*************{e.Result.Text}*****************");
-                if (e.Result.Text=="Press Down")
+                this.WriteLine($"****Heard Words***{e.Result.Text}*****************");
+                value = e.Result.Text;
+                List<string> phoneticAlphabet = new List<string> { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Qubec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu" };
+                foreach (var item in phoneticAlphabet)
                 {
-                    value = "{Down}";
+                    if (value.IndexOf("Shift") > 0)
+                    {
+                        value = value.Replace(item, item.ToUpper().Substring(0, 1));
+                    }
+                    else
+                    {
+                        value = value.Replace(item, item.ToLower().Substring(0, 1));
+                    }
                 }
-                else if (e.Result.Text=="Press Up")
+                value = value.Replace("Press ", "");
+                value = value.Replace("Control", "^");
+                value = value.Replace("Alt Space", "% ");
+                value = value.Replace("Alt", "%");
+                value = value.Replace("Escape", "{Esc}");
+                value = value.Replace("Zero", "0");
+                value = value.Replace("Tab", "{Tab}");
+                value = value.Replace("Backspace", "{Backspace}");
+                value = value.Replace("Enter", "{Enter}");
+                value = value.Replace("Page Down", "{PgDn}");
+                if (value.IndexOf("Page Up") >= 0)
                 {
-                    value = "{Up}";
-                }
-                else if (e.Result.Text=="Press Left")
-                {
-                    value = "{Left}";
-                }
-                else if (e.Result.Text=="Press Right")
-                {
-                    value = "{Right}";
-                }
-                else if (e.Result.Text=="Press Enter")
-                {
-                    value = "{Enter}";
-                }
-                else if (e.Result.Text=="Press Backspace")
-                {
-                    value = "{Backspace}";
+                    value = value.Replace("Page Up", "{PgUp}");
                 }
                 else
                 {
-                    value = e.Result.Text.Substring(e.Result.Text.IndexOf(" ") + 1, 1);
+                    value = value.Replace("Up", "{Up}");
                 }
+                value = value.Replace("Right", "{Right}");
+                value = value.Replace("Left", "{Left}");
+                value = value.Replace("Down", "{Down}");
+                value = value.Replace("Delete", "{Del}");
+                value = value.Replace("Home", "{Home}");
+                value = value.Replace("End", "{End}");
+                value = value.Replace("Hyphen", "-");
+
+
+
+                for (int i = 12; i > 0; i--)
+                {
+                    value = value.Replace($"Function {i}", "{F" + i + "}");
+                }
+                value = value.Replace("Shift", "+");
+                if (value != "% ")
+                {
+                    value = value.Replace(" ", "");
+                }
+                if (value == "Space")
+                {
+                    value = value.Replace("Space", " ");
+                }
+                this.WriteLine($"*****Sending Keys: {value.Replace("{", "").Replace("}", "").ToString()}*******");
                 List<string> keys = new List<string>(new string[] { value });
-                SendKeysCustom(null,  null , keys, currentProcess.ProcessName);
+                SendKeysCustom(null, null, keys, currentProcess.ProcessName);
             }
             else if (e.Result.Text.ToLower() == "microphone" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 this.WriteLine("*************Keys sent to toggle the microphone*****************");
                 List<string> keys = new List<string>(new string[] { "{ADD}" });
-                SendKeysCustom(null, "Untitled - Notepad", keys, "notepad", "Notepad.exe");
+                SendKeysCustom(null, null, keys, currentProcess.ProcessName);
             }
             else if (e.Result.Text.ToLower() == "restart dragon" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 this.WriteLine("*************Restarting Dragon and Voice Computer*****************");
                 var name = "Dragon Naturally speaking";
                 KillAllProcesses(name);
@@ -320,6 +456,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower().StartsWith("kill") && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 var name = e.Result.Text.ToLower();
                 name = name.Replace("kill", "");
                 name = name.Trim();
@@ -327,10 +464,12 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "quit application" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 System.Windows.Application.Current.Shutdown();
             }
             else if (e.Result.Text.ToLower() == "list commands" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 Dispatcher.Invoke(() =>
                 {
                     Commands.Text = "";
@@ -339,10 +478,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "short phrase mode" && e.Result.Confidence > 0.5)
             {
-                //Send Dragon to sleep
-                this.WriteLine("*************Key sent to sleep the microphone*****************");
-                List<string> keys = new List<string>(new string[] { "{DIVIDE}" });
-                SendKeysCustom(null, "Untitled - Notepad", keys, "notepad", "Notepad.exe");
+                isKeyboard = false;
+                SetDragonToSleep();
 
                 speechRecognitionEngine.UnloadAllGrammars();
                 speechRecognitionEngine.RecognizeAsyncStop();
@@ -392,11 +529,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             else if (e.Result.Text.ToLower().StartsWith("choose ") && lastResult != null)
             {
                 var choiceNumber = Int32.Parse(e.Result.Text.Substring(7));
-                //Dispatcher.Invoke(() =>
-                //{
-                //    Commands.Text = "";
-                //});
-                //ListCommands();
+                isKeyboard = false;
                 if (choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1))
                 {
                     Dispatcher.Invoke(() => { finalResult.Text = lastResult.PhraseResponse.Results[choiceNumber].DisplayText; });
@@ -404,6 +537,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "transfer as paragraph" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 if (this.TransferAsParagraph.IsChecked == false)
                 {
                     Dispatcher.Invoke(() => { TransferAsParagraph.IsChecked = true; });
@@ -415,6 +549,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "transfer to notepad" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 var resultText = "";
                 if (this.TransferAsParagraph.IsChecked == true)
                 {
@@ -434,10 +569,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     Commands.Text = "";
                 });
                 ListCommands();
-                //speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
+                isKeyboard = false;
             }
             else if (e.Result.Text.ToLower() == "long dictation mode" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 speechRecognitionEngine.RecognizeAsyncStop();
                 this.IsMicrophoneClientShortPhrase = false;
                 this.IsMicrophoneClientWithIntent = false;
@@ -459,6 +595,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "with intent mode" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
                 speechRecognitionEngine.RecognizeAsyncStop();
                 this.IsMicrophoneClientShortPhrase = false;
                 this.IsMicrophoneClientWithIntent = true;
@@ -480,7 +617,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (e.Result.Text.ToLower() == "global intellisense" && e.Result.Confidence > 0.5)
             {
-                //speechRecognitionEngine.RecognizeAsyncStop();
+                isKeyboard = false;
                 this.WriteLine($"Now Loading Global IntelliSense mode...");
                 speechRecognitionEngine.UnloadAllGrammars();
                 Dispatcher.Invoke(() =>
@@ -488,11 +625,25 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     Commands.Text = "";
                 });
                 LoadGrammar();
-                //speechRecognitionEngine.SetInputToDefaultAudioDevice();
-                //speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
             }
-            else if (e.Result.Text == "Stop IntelliSense" || e.Result.Text=="Stop Keyboard")
+            else if (e.Result.Text.ToLower() == "go dormant" && e.Result.Confidence > 0.5)
             {
+                isKeyboard = false;
+                speechRecognitionEngine.UnloadAllGrammars();
+                Dispatcher.Invoke(() =>
+                {
+                    Commands.Text = "";
+                });
+                Choices choices = new Choices();
+                this.WriteCommandLine($"Command");
+                choices.Add("List Commands");
+                this.WriteCommandLine("List Commands");
+                Grammar grammar = new Grammar(new GrammarBuilder(choices));
+                speechRecognitionEngine.LoadGrammarAsync(grammar);
+            }
+            else if (e.Result.Text == "Stop IntelliSense" || e.Result.Text == "Stop Keyboard")
+            {
+                isKeyboard = false;
                 speechRecognitionEngine.RecognizeAsyncCancel();
                 ListCommands();
                 speechRecognitionEngine.SetInputToDefaultAudioDevice();
@@ -501,12 +652,22 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if (languageAndCategoryAlreadyMatched == true)
             {
+                isKeyboard = false;
                 PerformGlobalIntelliSense(e);
             }
             else
             {
+                isKeyboard = false;
                 MatchLanguageAndCategory(e);
             }
+        }
+
+        private void SetDragonToSleep()
+        {
+            //Send Dragon to sleep
+            this.WriteLine("*************Key sent to sleep the microphone*****************");
+            List<string> keys = new List<string>(new string[] { "{DIVIDE}" });
+            SendKeysCustom(null, null, keys, currentProcess.ProcessName, null);
         }
 
         #region Events
@@ -759,7 +920,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             dispatcherTimer = new System.Windows.Threading.DispatcherTimer();
             dispatcherTimer.Tick += dispatcherTimer_Tick;
             dispatcherTimer.Interval = new TimeSpan(0, 0,0,0, 100);
-            
+
+            Screen s = System.Windows.Forms.Screen.AllScreens[1];
+
+
+            System.Drawing.Rectangle r = s.WorkingArea;
+            this.Top = r.Top;
+            this.Left = r.Left;
 
             ListCommands();
             speechRecognitionEngine.SetInputToDefaultAudioDevice();
@@ -790,7 +957,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 // Verify that Application is a running process.
                 if (applicationHandle == IntPtr.Zero)
                 {
-                    if (applicationToLaunch.Length>0)
+                    if (applicationToLaunch!= null && applicationToLaunch.Length>0)
                     {
                         Process.Start(applicationToLaunch);
                         Thread.Sleep(1000);
@@ -1207,6 +1374,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             choices.Add("Global IntelliSense");
             this.WriteCommandLine($"Keyboard");
             choices.Add("Keyboard");
+            this.WriteCommandLine("Go Dormant");
+            choices.Add("Go Dormant");
             this.WriteCommandLine($"List Commands");
             choices.Add("List Commands");
             this.WriteCommandLine($"-------------------");
@@ -1262,7 +1431,6 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 // for dataReco, since we already called endAudio() on it as soon as we were done
                 // sending all the data.
                 this.WriteResponseResult(e);
-
                 _startButton.IsEnabled = true;
                 _radioGroup.IsEnabled = true;
             }));
@@ -1307,7 +1475,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     {
                             finalResult.Text = (e.PhraseResponse.Results[0].DisplayText);
                     });
-                }
+                        List<string> keys = new List<string>(new string[] { e.PhraseResponse.Results[0].DisplayText });
+                        SendKeysCustom(null, null, keys, currentProcess.ProcessName);
+                    }
                 }
             }
         }
