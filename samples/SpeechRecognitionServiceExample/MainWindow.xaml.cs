@@ -441,6 +441,22 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 List<string> keys = new List<string>(new string[] { value });
                 SendKeysCustom(null, null, keys, currentProcess.ProcessName);
             }
+            else if (e.Result.Text.ToLower()=="edit list" && e.Result.Confidence>0.7)
+            {
+                //If result="Edit List" Then
+                //              strCommandLine = "C:\Msoffice\Access\DragonScripts.accdb"
+                //          strCommandLine = """C:\Program Files (x86)\Microsoft Office\root\Office16\MSACCESS.EXE"" " _
+                //          & Chr(34) & strCommandLine & Chr(34) & " /cmd " & Chr(34) & strLanguage & "|" & stringCategory & Chr(34)
+                //          Shell(strCommandLine, vbMaximizedFocus)
+                // Connection.Close
+                // Set Connection = Nothing
+                // Exit Sub
+                //End If
+                var arguments = $"\"C:\\Msoffice\\Access\\DragonScripts.accdb\" /cmd \"{languageMatched}|{categoryMatched}\"";
+                var commandline = $"\"C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\MSACCESS.EXE\"";
+
+                Process.Start(commandline,arguments);
+            }
             else if (e.Result.Text.ToLower() == "toggle microphone" && e.Result.Confidence > 0.5)
             {
                 isKeyboard = false;
@@ -582,19 +598,19 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
                 IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
                 invokeProvider.Invoke();
-                dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, 100);
+                dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 1,0 );
                 dispatcherTimer.Start();
                 Dispatcher.Invoke(() =>
                 {
                     Commands.Text = "";
                 });
                 this.WriteCommandLine("Grammar Mode");
-                this.WriteCommandLine("Transfer to Notepad");
+                this.WriteCommandLine("Transfer to Application");
                 this.WriteCommandLine("Transfer as Paragraph");
 
                 Choices choices = new Choices();
                 choices.Add("Grammar Mode");
-                choices.Add("Transfer to Notepad");
+                choices.Add("Transfer to Application");
                 choices.Add("Transfer as Paragraph");
                 for (int i = 0; i < 6; i++)
                 {
@@ -606,11 +622,12 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 speechRecognitionEngine.LoadGrammarAsync(grammar);
                 speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
             }
-            else if (e.Result.Text.ToLower().StartsWith("choose ") && lastResult != null)
+            else if (e.Result.Text.ToLower().StartsWith("choose "))
             {
                 var choiceNumber = Int32.Parse(e.Result.Text.Substring(7));
                 isKeyboard = false;
-                if (choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1))
+
+                if (lastResult != null && choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1) )
                 {
                     Dispatcher.Invoke(() => { finalResult.Text = lastResult.PhraseResponse.Results[choiceNumber].DisplayText; });
                 }
@@ -627,20 +644,20 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     Dispatcher.Invoke(() => { TransferAsParagraph.IsChecked = false; });
                 }
             }
-            else if (e.Result.Text.ToLower() == "transfer to notepad" && e.Result.Confidence > 0.5)
+            else if (e.Result.Text.ToLower() == "transfer to application" && e.Result.Confidence > 0.5)
             {
                 isKeyboard = false;
                 var resultText = "";
                 if (this.TransferAsParagraph.IsChecked == true)
                 {
-                    resultText = Environment.NewLine + this.finalResult.Text;
+                    resultText = "{Enter}" + this.finalResult.Text;
                 }
                 else
                 {
                     resultText = "  " + this.finalResult.Text;
                 }
                 List<string> keys = new List<string>(new string[] { resultText });
-                SendKeysCustom(null, "Untitled - Notepad", keys, "notepad", "Notepad.exe");
+                SendKeysCustom(null, null , keys, currentProcess.ProcessName,  null );
             }
             else if (e.Result.Text.ToLower() == "grammar mode" && e.Result.Confidence > 0.5)
             {
@@ -1360,7 +1377,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         {
             Dispatcher.Invoke((System.Action)(() =>
             {
-                this.WriteLine("--- OnMicShortPhraseResponseReceivedHandler ---");
+                this.WriteLine($"--- OnMicShortPhraseResponseReceivedHandler {e.PhraseResponse.RecognitionStatus.ToString()}---");
 
                 // we got the final result, so it we can end the mic reco.  No need to do this
                 // for dataReco, since we already called endAudio() on it as soon as we were done
@@ -1429,6 +1446,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                         this.WriteLine($"Copied to Clipboard: {globalIntellisense.Display_Value}");
                         List<string> keys = new List<string>(new string[] { "^v" });
                         SendKeysCustom("", "", keys, currentProcess.ProcessName);
+                        if (categoryMatched=="Access" || categoryMatched=="Blocks")
+                        {
+                            keys = new List<string>(new string[] { "{Enter 2}" });
+                            SendKeysCustom("", "", keys, currentProcess.ProcessName);
+                        }
                     }
                     else
                     {
@@ -1483,6 +1505,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                                 this.WriteCommandLine("Stop IntelliSense");
                                 choices.Add("Global IntelliSense");
                                 this.WriteCommandLine("Global IntelliSense");
+                                this.WriteCommandLine("Edit List");
+                                choices.Add("Edit List");
                                 choices.Add("Go Back");
                                 this.WriteCommandLine("Go Back");
                                 this.WriteCommandLine("Go Dormant");
@@ -1604,11 +1628,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 this.WriteLine("No phrase response is available.");
                 //dispatcherTimer.Stop();
-                lastResult = null;
+                //lastResult = null;
             }
             else
             {
-                if (!e.PhraseResponse.Results[0].LexicalForm.StartsWith("choose ") && e.PhraseResponse.Results[0].LexicalForm!="transfer to notepad")
+                if (!e.PhraseResponse.Results[0].LexicalForm.StartsWith("choose ") && e.PhraseResponse.Results[0].LexicalForm!="transfer to application")
                 {
                     Dispatcher.Invoke(() => {
                         var position = Commands.Text.IndexOf("********* Final n-BEST Results *********");
@@ -1651,10 +1675,10 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             if (e.PhraseResponse.RecognitionStatus == RecognitionStatus.EndOfDictation ||
                 e.PhraseResponse.RecognitionStatus == RecognitionStatus.DictationEndSilenceTimeout)
             { 
-                if (e.PhraseResponse.Results[0].LexicalForm == "transfer to notepad" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
+                if (e.PhraseResponse.Results[0].LexicalForm == "transfer to application" && e.PhraseResponse.RecognitionStatus == RecognitionStatus.RecognitionSuccess)
                 {
-                    List<string> keys = new List<string>(new string[] { Environment.NewLine + this.finalResult.Text + Environment.NewLine });
-                    SendKeysCustom(null, "Untitled - Notepad", keys, "Notepad.exe");
+                    List<string> keys = new List<string>(new string[] { "{Enter}" + this.finalResult.Text + "{Enter}" });
+                    SendKeysCustom(null,  null , keys,currentProcess.ProcessName, null );
                 }
                 Dispatcher.Invoke(
                     (System.Action)(() => 
@@ -2031,12 +2055,20 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             //Activate the first application refined with this name
             if (processes.Count()>0)
             {
-                SetForegroundWindow(processes[0].MainWindowHandle);
+                var currentWindowHandle = GetForegroundWindow();
+                if (processes[0].Handle != currentWindowHandle)
+                {
+                    SetForegroundWindow(processes[0].MainWindowHandle);
+                }
             }
         }
         void ActivateApp(IntPtr windowHandle)
         {
-            SetForegroundWindow(windowHandle);
+            var currentWindowHandle = GetForegroundWindow();
+            if (windowHandle!=currentWindowHandle)
+            {
+                SetForegroundWindow(windowHandle);
+            }
         }
     }
 }
