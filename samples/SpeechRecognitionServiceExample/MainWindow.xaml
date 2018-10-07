@@ -18,7 +18,7 @@
             <ColumnDefinition Width="0*"/>
             <ColumnDefinition Width="433*" MinWidth="200"/>
         </Grid.ColumnDefinitions>
-        <Label Grid.Row="0" Grid.Column="2" HorizontalAlignment="Left" Foreground="White" Content="Log" Margin="15,0,0,0" Width="408"/>
+        <Label Grid.Row="0" Grid.Column="2" Foreground="White" Content="Log" Margin="15,0,0,0" Width="408"/>
         <Grid Grid.Row="0" Grid.Column="2" Margin="136,0,10,0">
             <StackPanel Visibility="Hidden" Orientation="Horizontal" HorizontalAlignment="Right">
                 <TextBox Background="Black" Foreground="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="2" Text="{Binding SubscriptionKey, ElementName=_mainWindow, Mode=TwoWay}"/>
@@ -74,6 +74,6 @@
         </Grid>
         <TextBox x:Name="_logText" Foreground="White" Background="Black" Grid.Row="1" Grid.Column="2" VerticalAlignment="Stretch" TextWrapping="Wrap" Text="" VerticalScrollBarVisibility="Visible" Margin="10,5,0,0" Width="413"/>
         <TextBox x:Name="Commands" Foreground="White" Background="Black" Margin="300,5,10,0" TextWrapping="Wrap" Text="Commands..." VerticalAlignment="Stretch" Grid.Row="1"/>
-        <Label Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left" Foreground="White" Content="Voice Commands" Margin="300,0,0,0" Width="259"/>
+        <Label Grid.Row="0" Grid.Column="0" Foreground="White" Content="Voice Commands" Margin="300,0,0,0" Width="259"/>
     </Grid>
 </Window>

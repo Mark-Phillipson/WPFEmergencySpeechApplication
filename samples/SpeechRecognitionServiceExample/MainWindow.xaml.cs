@@ -119,6 +119,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         Process currentProcess;
         private bool isKeyboard=false;
         private string lastCommand;
+        private bool launcherCategoryMatched;
+        private string lastLauncherCategory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainWindow"/> class.
@@ -129,28 +131,51 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this.InitializeComponent();
             this.Initialize();
         }
-
+        private void LoadGrammarLauncher( )
+        {
+            Choices choices = new Choices();
+            using (var db = new MyDatabase())
+            {
+                List<tblCategory> categories = null;
+                categories = db.tblCategories.Where(c => c.Category_Type == "Launch Applications").OrderBy(c => c.Category).ToList();
+                foreach (var category in categories)
+                {
+                    var count = db.tblLaunchers.Where(l => l.Menu == category.MenuNumber).Count();
+                    choices.Add($"Launcher {category.Category}");
+                    this.WriteCommandLine($"Launcher {category.Category} ({count})");
+                }
+                this.WriteLine($"Launcher grammars loaded...");
+            }
+            choices.Add("Stop Launcher");
+            this.WriteCommandLine("Stop Launcher");
+            this.WriteCommandLine("Go Dormant");
+            choices.Add("Go Dormant");
+            this.WriteCommandLine("List Commands");
+            choices.Add("List Commands");
+            Grammar grammar = new Grammar(new GrammarBuilder(choices));
+            speechRecognitionEngine.LoadGrammarAsync(grammar);
+        }
         private void LoadGrammarCustomIntellisense(string specificLanguage)
         {
             Choices choices = new Choices();
             using (var db = new MyDatabase())
             {
                 List<tblLanguage> languages = null;
-                if (specificLanguage!=  null )
+                if (specificLanguage != null)
                 {
-                    languages=db.tblLanguages.Where(l => l.Language ==specificLanguage).OrderBy(l => l.Language).ToList();
+                    languages = db.tblLanguages.Where(l => l.Language == specificLanguage).OrderBy(l => l.Language).ToList();
                 }
                 else
                 {
-                    languages=db.tblLanguages.Where(l => l.tblCustomIntelliSenses.Count > 0 && l.Active == true).OrderBy(l => l.Language).ToList();
+                    languages = db.tblLanguages.Where(l => l.tblCustomIntelliSenses.Count > 0 && l.Active == true).OrderBy(l => l.Language).ToList();
                 }
                 foreach (var language in languages)
                 {
-                    List<tblCategory> categories1 = db.tblCategories.OrderBy(c => c.Category).Where(c => c.tblCustomIntelliSenses.Count > 0 && c.Category_Type == "IntelliSense Command"  && c.tblCustomIntelliSenses.Where(s => s.Language_ID== language.ID && (s.ComputerID== null  || s.ComputerID==4 )).Count()>0).ToList();
+                    List<tblCategory> categories1 = db.tblCategories.OrderBy(c => c.Category).Where(c => c.tblCustomIntelliSenses.Count > 0 && c.Category_Type == "IntelliSense Command" && c.tblCustomIntelliSenses.Where(s => s.Language_ID == language.ID && (s.ComputerID == null || s.ComputerID == 4)).Count() > 0).ToList();
                     foreach (var category in categories1)
                     {
                         var tempLanguage = language.Language;
-                        if (tempLanguage=="Not Applicable")
+                        if (tempLanguage == "Not Applicable")
                         {
                             tempLanguage = "Intellisense";
                         }
@@ -168,6 +193,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
             speechRecognitionEngine.LoadGrammarAsync(grammar);
         }
+
         private void LoadGrammarKeyboard()
         {
             //dispatcherTimer.Stop();
@@ -361,6 +387,47 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 });
                 LoadGrammarKeyboard();
             }
+            else if (e.Result.Text.ToLower()=="launch applications" && e.Result.Confidence>0.5 || e.Result.Text.ToLower() == "go back"  && launcherCategoryMatched == true)
+            {
+                this.WriteLine($"Launch Applications Mode… ");
+                speechRecognitionEngine.UnloadAllGrammars();
+                Dispatcher.Invoke(() => { Commands.Text = ""; });
+                LoadGrammarLauncher();
+            }
+            else if (e.Result.Text.ToLower().StartsWith("launcher ") && e.Result.Confidence > 0.5)
+            {
+                var result = e.Result.Text.ToLower();
+                result = result.Replace("launcher ", "");
+                speechRecognitionEngine.UnloadAllGrammars();
+                Choices choices = new Choices();
+                Dispatcher.Invoke(() =>
+                {
+                    Commands.Text = "";
+                });
+
+
+                using (var db = new MyDatabase())
+                {
+                    var categoryId = db.tblCategories.Where(c => c.Category.ToLower() == result).FirstOrDefault().MenuNumber;
+                    var launchItems = db.tblLaunchers.Where(l => l.Menu == categoryId).ToList();
+                    foreach (var launchItem in launchItems)
+                    {
+                        this.WriteCommandLine($"{launchItem.Name}");
+                        choices.Add(launchItem.Name);
+                    }
+                }
+                //this.WriteCommandLine("Edit List");
+                //choices.Add("Edit List");
+                choices.Add("Go Back");
+                this.WriteCommandLine("Go Back");
+                this.WriteCommandLine("Go Dormant");
+                choices.Add("Go Dormant");
+                Grammar grammar = new Grammar(new GrammarBuilder(choices));
+                speechRecognitionEngine.LoadGrammar(grammar);
+                launcherCategoryMatched = true;
+                lastLauncherCategory = result;
+                this.WriteLine($"Launcher set up for: {result}");
+            }
             else if (e.Result.Text.ToLower().StartsWith("press ") && e.Result.Confidence > 0.5 && isKeyboard == true)
             {
                 UpdateCurrentProcess();
@@ -421,9 +488,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     value = value.Replace("Space", " ");
                 }
                 this.WriteLine($"*****Sending Keys: {value.Replace("{", "").Replace("}", "").ToString()}*******");
-                if (value.Contains("{Up}")  && IsNumber(value.Substring( value.IndexOf("}") +1 )))
+                if (value.Contains("{Up}") && IsNumber(value.Substring(value.IndexOf("}") + 1)))
                 {
-                    value="{Up " + value.Substring(value.IndexOf("}") + 1) + "}";
+                    value = "{Up " + value.Substring(value.IndexOf("}") + 1) + "}";
                 }
                 if (value.Contains("{Down}") && IsNumber(value.Substring(value.IndexOf("}") + 1)))
                 {
@@ -433,15 +500,15 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 {
                     value = "{Left " + value.Substring(value.IndexOf("}") + 1) + "}";
                 }
-                if (value.Contains("{Right}")  && IsNumber(value.Substring( value.IndexOf("}") +1 )))
+                if (value.Contains("{Right}") && IsNumber(value.Substring(value.IndexOf("}") + 1)))
                 {
-                    value="{Right " + value.Substring(value.IndexOf("}") + 1) + "}";
+                    value = "{Right " + value.Substring(value.IndexOf("}") + 1) + "}";
                 }
 
                 List<string> keys = new List<string>(new string[] { value });
                 SendKeysCustom(null, null, keys, currentProcess.ProcessName);
             }
-            else if (e.Result.Text.ToLower()=="edit list" && e.Result.Confidence>0.7)
+            else if (e.Result.Text.ToLower() == "edit list" && e.Result.Confidence > 0.7)
             {
                 //If result="Edit List" Then
                 //              strCommandLine = "C:\Msoffice\Access\DragonScripts.accdb"
@@ -455,7 +522,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 var arguments = $"\"C:\\Msoffice\\Access\\DragonScripts.accdb\" /cmd \"{languageMatched}|{categoryMatched}\"";
                 var commandline = $"\"C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\MSACCESS.EXE\"";
 
-                Process.Start(commandline,arguments);
+                Process.Start(commandline, arguments);
             }
             else if (e.Result.Text.ToLower() == "toggle microphone" && e.Result.Confidence > 0.5)
             {
@@ -494,7 +561,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     else
                     {
                         List<string> keysKB = new List<string>(new string[] { "^+k" });
-                        SendKeysCustom(null,  null , keysKB, currentProcess.ProcessName);
+                        SendKeysCustom(null, null, keysKB, currentProcess.ProcessName);
 
                     }
                 }
@@ -528,7 +595,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 {
                 }
             }
-            else if ((e.Result.Text.ToLower() == "emergency speech" && e.Result.Confidence > 0.9) || (e.Result.Text.ToLower()=="list commands" && e.Result.Confidence>0.5))
+            else if ((e.Result.Text.ToLower() == "emergency speech" && e.Result.Confidence > 0.9) || (e.Result.Text.ToLower() == "list commands" && e.Result.Confidence > 0.5))
             {
 
                 speechRecognitionEngine.UnloadAllGrammars();
@@ -536,23 +603,23 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 {
                     Commands.Text = "";
                 });
-                if (lastCommand== null )
+                if (lastCommand == null)
                 {
-                    ListCommands();
+                    ListMainMenuCommands();
                 }
-                else if (lastCommand.ToLower()=="global intellisense")
+                else if (lastCommand.ToLower() == "global intellisense")
                 {
-                    LoadGrammarCustomIntellisense( null ); 
+                    LoadGrammarCustomIntellisense(null);
                 }
-                else if (lastCommand.ToLower()=="visual basic intellisense")
+                else if (lastCommand.ToLower() == "visual basic intellisense")
                 {
                     LoadGrammarCustomIntellisense("Visual Basic");
                 }
-                else if (lastCommand.ToLower()=="c sharp intellisense")
+                else if (lastCommand.ToLower() == "c sharp intellisense")
                 {
                     LoadGrammarCustomIntellisense("C Sharp");
                 }
-                else if (lastCommand.ToLower()=="javascript intellisense")
+                else if (lastCommand.ToLower() == "javascript intellisense")
                 {
                     LoadGrammarCustomIntellisense("JavaScript");
                 }
@@ -562,13 +629,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     isKeyboard = true;
                     LoadGrammarKeyboard();
                 }
-                else if (languageAndCategoryAlreadyMatched==true)
+                else if (languageAndCategoryAlreadyMatched == true)
                 {
                     MatchLanguageAndCategory(languageMatched + " " + categoryMatched);
                 }
                 else
                 {
-                    ListCommands();
+                    ListMainMenuCommands();
                 }
                 this.WriteLine("****Pressing the / Key on the number pad****");
                 List<string> keys = new List<string>(new string[] { "{DIVIDE}" });
@@ -598,7 +665,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 ButtonAutomationPeer peer = new ButtonAutomationPeer(this._startButton);
                 IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
                 invokeProvider.Invoke();
-                dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 1,0 );
+                dispatcherTimer.Interval = new TimeSpan(0, 0, 0, 0, 1);
                 dispatcherTimer.Start();
                 Dispatcher.Invoke(() =>
                 {
@@ -627,7 +694,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 var choiceNumber = Int32.Parse(e.Result.Text.Substring(7));
                 isKeyboard = false;
 
-                if (lastResult != null && choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1) )
+                if (lastResult != null && choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1))
                 {
                     Dispatcher.Invoke(() => { finalResult.Text = lastResult.PhraseResponse.Results[choiceNumber].DisplayText; });
                 }
@@ -657,15 +724,15 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     resultText = "  " + this.finalResult.Text;
                 }
                 List<string> keys = new List<string>(new string[] { resultText });
-                SendKeysCustom(null, null , keys, currentProcess.ProcessName,  null );
+                SendKeysCustom(null, null, keys, currentProcess.ProcessName, null);
             }
-            else if (e.Result.Text.ToLower() == "grammar mode" && e.Result.Confidence > 0.5)
+            else if ((e.Result.Text.ToLower() == "grammar mode" && e.Result.Confidence > 0.5) || (e.Result.Text.ToLower() == "stop launcher" && e.Result.Confidence > 0.5))
             {
                 Dispatcher.Invoke(() =>
                 {
                     Commands.Text = "";
                 });
-                ListCommands();
+                ListMainMenuCommands();
                 isKeyboard = false;
             }
             else if (e.Result.Text.ToLower() == "long dictation mode" && e.Result.Confidence > 0.5)
@@ -712,7 +779,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 dispatcherTimer.Start();
                 this.WriteCommandLine("Grammar Mode");
             }
-            else if ((e.Result.Text.ToLower() == "visual basic intellisense" && e.Result.Confidence > 0.5) || (e.Result.Text.ToLower()=="go back" && languageMatched.ToLower()=="visual basic" && e.Result.Confidence>0.5))
+            else if ((e.Result.Text.ToLower() == "visual basic intellisense" && e.Result.Confidence > 0.5) || (e.Result.Text.ToLower() == "go back" && languageMatched == "Visual Basic" && e.Result.Confidence > 0.5))
             {
                 isKeyboard = false;
                 this.WriteLine($"Now Loading Global IntelliSense mode...");
@@ -781,7 +848,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 isKeyboard = false;
                 speechRecognitionEngine.RecognizeAsyncCancel();
-                ListCommands();
+                ListMainMenuCommands();
                 speechRecognitionEngine.SetInputToDefaultAudioDevice();
                 speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
                 languageAndCategoryAlreadyMatched = false;
@@ -790,6 +857,11 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 isKeyboard = false;
                 PerformGlobalIntelliSense(e);
+            }
+            else if (launcherCategoryMatched==true)
+            {
+                LaunchApplication(e.Result.Text);
+                ListMainMenuCommands();
             }
             else
             {
@@ -800,6 +872,19 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             if (e.Result.Text.ToLower()!="go dormant")
             {
                 lastCommand = e.Result.Text.ToLower();
+            }
+        }
+
+        private void LaunchApplication(string result)
+        {
+            var commandline = GetCommandLineFromLauncherName(result);
+            try
+            {
+                Process.Start(commandline);
+            }
+            catch (Exception exception)
+            {
+                this.WriteLine(exception.Message);
             }
         }
 
@@ -1076,7 +1161,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this.Top = r.Top;
             this.Left = r.Left;
 
-            ListCommands();
+            ListMainMenuCommands();
             speechRecognitionEngine.SetInputToDefaultAudioDevice();
             speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
             UpdateCurrentProcess();
@@ -1496,7 +1581,14 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                                 });
                                 foreach (var command in commands)
                                 {
-                                    this.WriteCommandLine(command.Display_Value);
+                                    if (command.Display_Value.Length + command.SendKeys_Value.Length >60)
+                                    {
+                                        this.WriteCommandLine($"{command.Display_Value}      ({command.SendKeys_Value.Substring(0,60 - command.Display_Value.Length)})");
+                                    }
+                                    else
+                                    {
+                                        this.WriteCommandLine($"{command.Display_Value}      ({command.SendKeys_Value})");
+                                    }
                                     //Load a new grammar here
                                     choices.Add(command.Display_Value);
                                 }
@@ -1524,7 +1616,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         }
 
-        private void ListCommands()
+        private void ListMainMenuCommands()
         {
             Choices choices = new Choices();
             speechRecognitionEngine.UnloadAllGrammars();
@@ -1559,6 +1651,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             choices.Add("Keyboard");
             this.WriteCommandLine("Go Dormant");
             choices.Add("Go Dormant");
+            this.WriteCommandLine("Launch Applications");
+            choices.Add("Launch Applications");
             this.WriteCommandLine($"List Commands");
             choices.Add("List Commands");
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
@@ -1865,7 +1959,19 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         private void WriteCommandLine(string format, params object[] args)
         {
-            var formattedStr = string.Format(format, args);
+            var formattedStr = "";
+            if (format.Contains("{") || format.Contains("}"))
+            {
+                formattedStr = format;
+            }
+            else
+            {
+                formattedStr = string.Format(format, args);
+            }
+            formattedStr = formattedStr.Replace("/n", "");
+            formattedStr = formattedStr.Replace("/r", "");
+            formattedStr = formattedStr.Replace(Environment.NewLine, "");
+
             Trace.WriteLine(formattedStr);
             Dispatcher.Invoke(() =>
             {
