@@ -52,6 +52,7 @@
     </ApplicationDefinition>
     <Compile Include="MessageHelper.cs" />
     <Compile Include="Models\ApplicationsToKill.cs" />
+    <Compile Include="Models\Computer.cs" />
     <Compile Include="Models\MyDatabase.cs" />
     <Compile Include="Models\tblCategory.cs" />
     <Compile Include="Models\tblCustomIntelliSense.cs" />

@@ -19,9 +19,11 @@ namespace SpeechToTextWPFSample.Models
         public virtual DbSet<tblMultipleLauncher> tblMultipleLaunchers { get; set; }
         public virtual DbSet<Values_to_Insert> Values_to_Inserts { get; set; }
         public virtual DbSet<ApplicationsToKill> ApplicationsToKill { get; set; }
+        public virtual DbSet<Computer> Computers { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
+
             modelBuilder.Entity<tblCategory>()
                 .HasMany(e => e.tblCustomIntelliSenses)
                 .WithOptional(e => e.tblCategory)
@@ -44,6 +46,8 @@ namespace SpeechToTextWPFSample.Models
             modelBuilder.Entity<Values_to_Insert>()
                 .Property(e => e.RowVersion)
                 .IsFixedLength();
+
+
         }
     }
 }

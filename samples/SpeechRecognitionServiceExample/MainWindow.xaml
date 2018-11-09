@@ -18,7 +18,7 @@
             <ColumnDefinition Width="0*"/>
             <ColumnDefinition Width="433*" MinWidth="200"/>
         </Grid.ColumnDefinitions>
-        <Label Grid.Row="0" Grid.Column="2" Foreground="White" Content="Log" Margin="15,0,0,0" Width="408"/>
+        <Label Grid.Row="0" Grid.Column="2" Foreground="White" Content="Log" Margin="15,0,0,0"/>
         <Grid Grid.Row="0" Grid.Column="2" Margin="136,0,10,0">
             <StackPanel Visibility="Hidden" Orientation="Horizontal" HorizontalAlignment="Right">
                 <TextBox Background="Black" Foreground="White" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Padding="2" Text="{Binding SubscriptionKey, ElementName=_mainWindow, Mode=TwoWay}"/>
@@ -55,7 +55,7 @@
                     <ColumnDefinition Width="auto"/>
                 </Grid.ColumnDefinitions>
 
-                <Button x:Name="_startButton" Background="black"    Foreground="White" Grid.Column="1" Content="Start _Recognition" Click="StartButton_Click" Margin="0,0,-129,0" Padding="5" Visibility="Visible" HorizontalAlignment="Left" VerticalAlignment="Top" Height="61" Width="131"/>
+                <Button x:Name="_startButton" Background="black"    Foreground="White" Grid.Column="1" Content="Start _Recognition" Click="StartButton_Click" Margin="0,0,-129,0" Padding="5" Visibility="Hidden" HorizontalAlignment="Left" VerticalAlignment="Top" Height="61" Width="131"/>
             </Grid>
             <Grid HorizontalAlignment="Left" Margin="10,-3,10,226" VerticalAlignment="Top" Grid.RowSpan="3">
                 <Grid.RowDefinitions>
@@ -67,13 +67,21 @@
                     <ColumnDefinition Width="3*"/>
                     <ColumnDefinition Width="13*"/>
                 </Grid.ColumnDefinitions>
-                <TextBox x:Name="Result" Height="90" Margin="8,5,0,0" TextWrapping="Wrap" Text="Preliminary results" Width="277" Background="Black" Foreground="White" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="3" FontSize="16"/>
-                <TextBox x:Name="finalResult" Foreground="White"  Background="Black" Height="198" TextWrapping="Wrap" Text="Final result" Width="277" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8,0,0,-207" Grid.ColumnSpan="3" FontSize="16" Grid.Row="1"/>
+                <TextBox x:Name="Result" Height="95" Margin="8,0,0,0" TextWrapping="Wrap" Text="Preliminary results" Width="277" Background="Black" Foreground="White" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="3" FontSize="16"/>
+                <TextBox x:Name="finalResult" Foreground="White"  Background="Black" Height="242" TextWrapping="Wrap" Text="Final result" Width="277" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8,0,0,-251" Grid.ColumnSpan="3" FontSize="16" Grid.Row="1"/>
             </Grid>
-            <CheckBox x:Name="TransferAsParagraph" Foreground="White" Content="Transfer as Paragraph" HorizontalAlignment="Left" Height="21" Margin="10,81,0,0" Grid.Row="2" VerticalAlignment="Top" Width="260"/>
+            <CheckBox x:Name="TransferAsParagraph" Foreground="White" Content="Transfer as Paragraph" HorizontalAlignment="Left" Height="21" Margin="10,152,0,0" Grid.Row="2" VerticalAlignment="Top" Width="260"/>
+            <CheckBox x:Name="RemovePunctuation" Foreground="White" Content="Remove Punctuation" HorizontalAlignment="Left" Height="21" Margin="10,172,0,0" Grid.Row="2" VerticalAlignment="Top" Width="260"/>
+            <CheckBox x:Name="RemoveSpaces" Foreground="White" Content="Remove Spaces" HorizontalAlignment="Left" Height="21" Margin="10,192,0,0" Grid.Row="2" VerticalAlignment="Top" Width="260"/>
+            <CheckBox x:Name="CamelCase" Foreground="White" Content="Camel Case" HorizontalAlignment="Left" Height="21" Margin="10,212,0,0" Grid.Row="2" VerticalAlignment="Top" Width="260"/>
+            <CheckBox x:Name="Variable" Foreground="White" Content="Variable" HorizontalAlignment="Left" Height="21" Margin="10,232,0,0" Grid.Row="2" VerticalAlignment="Top" Width="260"/>
+            <Label Content="Replace" HorizontalAlignment="Left" Height="31" Foreground="White" Margin="10,73,0,0" Grid.Row="2" VerticalAlignment="Top" Width="92"/>
+            <TextBox x:Name="ReplaceText" Foreground="White" Background="Black" HorizontalAlignment="Left" Height="31" Margin="118,73,0,0" Grid.Row="2" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="177"/>
+            <Label Content="With this" HorizontalAlignment="Left" Height="31" Foreground="White" Margin="10,113,0,0" Grid.Row="2" VerticalAlignment="Top" Width="92"/>
+            <TextBox x:Name="ReplaceWith" Foreground="White" Background="Black" HorizontalAlignment="Left" Height="31" Margin="118,113,0,0" Grid.Row="2" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="177"/>
         </Grid>
-        <TextBox x:Name="_logText" Foreground="White" Background="Black" Grid.Row="1" Grid.Column="2" VerticalAlignment="Stretch" TextWrapping="Wrap" Text="" VerticalScrollBarVisibility="Visible" Margin="10,5,0,0" Width="413"/>
+        <TextBox x:Name="_logText" Foreground="White" Background="Black" Grid.Row="1" Grid.Column="2" VerticalAlignment="Stretch" TextWrapping="Wrap" Text="" VerticalScrollBarVisibility="Visible" Margin="10,5,0,0"/>
         <TextBox x:Name="Commands" Foreground="White" Background="Black" Margin="300,5,10,0" TextWrapping="Wrap" Text="Commands..." VerticalAlignment="Stretch" Grid.Row="1"/>
-        <Label Grid.Row="0" Grid.Column="0" Foreground="White" Content="Voice Commands" Margin="300,0,0,0" Width="259"/>
+        <Label Grid.Row="0" Grid.Column="0" Foreground="White" Content="Voice Commands" Margin="300,0,0,0"/>
     </Grid>
 </Window>
