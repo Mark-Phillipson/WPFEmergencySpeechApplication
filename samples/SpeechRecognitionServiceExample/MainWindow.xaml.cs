@@ -86,8 +86,14 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private string languageMatched;
         private string categoryMatched;
         private bool languageAndCategoryAlreadyMatched = false;
+        //Mouse actions
+        private const int MOUSEEVENTF_LEFTDOWN = 0x02;
+        private const int MOUSEEVENTF_LEFTUP = 0x04;
+        private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
+        private const int MOUSEEVENTF_RIGHTUP = 0x10;
 
-        private SpeechRecognitionEngine speechRecognitionEngine = new SpeechRecognitionEngine();
+        private SpeechRecognitionEngine  speechRecognitionEngine= new SpeechRecognitionEngine();
+        private SpeechRecognizer speechRecognizer;
         private SpeechSynthesizer SpeechSynthesizer = new SpeechSynthesizer();
         private SpeechResponseEventArgs lastResult = null;
         /// <summary>
@@ -125,7 +131,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private bool launcherCategoryMatched;
         private string lastLauncherCategory;
         private bool completed;
-        private SpeechRecognizer recognizer;
+        
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainWindow"/> class.
@@ -137,9 +143,16 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 System.Windows.Application.Current.Shutdown();
                 return;
             }
-            speechRecognitionEngine.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(SpeechRecognitionEngine_SpeechRecognized);
-            this.InitializeComponent();
-            this.Initialize();
+            StartWindowsSpeechRecognition();
+            if (speechRecognizer!= null )
+            {
+                speechRecognizer.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(SpeechRecognitionEngine_SpeechRecognized);
+                this.InitializeComponent();
+                this.Initialize();
+                return;
+            }
+            System.Windows.Application.Current.Shutdown();
+            return;
         }
         private void LoadGrammarLauncher(bool showCommands= true )
         {
@@ -170,9 +183,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 }
             }
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
-            speechRecognitionEngine.LoadGrammarAsync(grammar);
+            speechRecognizer.LoadGrammarAsync(grammar);
         }
-        private void LoadGrammarCustomIntellisense(string specificLanguage,bool showCommands=true)
+        private void LoadGrammarCustomIntellisense(string specificLanguage,bool showCommands=true,bool useEngine=false)
         {
             Choices choices = new Choices();
             using (var db = new MyDatabase())
@@ -219,14 +232,21 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                     this.WriteCommandLine("Go Dormant");
                     choices.Add("Go Dormant");
                     choices.Add("Stop IntelliSense");
-                    BuildPhoneticAlphabetGrammars(speechRecognitionEngine);
+                    BuildPhoneticAlphabetGrammars(useEngine);
                 }
             }
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
-            speechRecognitionEngine.LoadGrammarAsync(grammar);
+            if (useEngine==true)
+            {
+                speechRecognitionEngine.LoadGrammarAsync(grammar);
+            }
+            else
+            {
+                speechRecognizer.LoadGrammarAsync(grammar);
+            }
         }
-
-        private void LoadGrammarKeyboard(bool showCommands= true)
+  
+        private void LoadGrammarKeyboard(bool showCommands= true, bool useEngine= false)
         {
             //dispatcherTimer.Stop();
             List<string> phoneticAlphabet = new List<string> { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Qubec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu" };
@@ -377,8 +397,17 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
             choices.Add("perform replacement");
             this.WriteCommandLine("Perform Replacement");
-            BuildReplaceLettersGrammars(speechRecognitionEngine, "Replace");
-            BuildReplaceLettersGrammars(speechRecognitionEngine, "With this");
+            if (useEngine==true)
+            {
+                BuildReplaceLettersGrammars(speechRecognitionEngine, "Replace");
+                BuildReplaceLettersGrammars(speechRecognitionEngine, "With this");
+            }
+            else
+            {
+                BuildReplaceLettersGrammars(speechRecognizer, "Replace");
+                BuildReplaceLettersGrammars(speechRecognizer, "With this");
+            }
+            
 
             choices.Add("Transfer to Application");
             this.WriteCommandLine("Transfer to Application");
@@ -450,22 +479,31 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
             if (showCommands==true)
             {
-                BuildPhoneticAlphabetGrammars(speechRecognitionEngine);
+                BuildPhoneticAlphabetGrammars(useEngine);
                 choices.Add("Stop Keyboard");
                 this.WriteCommandLine("Stop Keyboard");
                 this.WriteCommandLine("Go Dormant");
                 choices.Add("Go Dormant");
             }
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
-            speechRecognitionEngine.LoadGrammarAsync(grammarDirections);
-            speechRecognitionEngine.LoadGrammarAsync(grammar);
+            if (useEngine==true)
+            {
+                speechRecognizer.LoadGrammarAsync(grammarDirections);
+                speechRecognizer.LoadGrammarAsync(grammar);
+            }
+            else
+            {
+                speechRecognizer.LoadGrammarAsync(grammarDirections);
+                speechRecognizer.LoadGrammarAsync(grammar);
+            }
 
-            SetUpSymbolGrammarCommands();
+            SetUpSymbolGrammarCommands(useEngine);
 
             UpdateCurrentProcess();
         }
 
-        private void BuildPhoneticAlphabetGrammars(SpeechRecognitionEngine speechRecognitionEngine)
+
+        private void BuildReplaceLettersGrammars(SpeechRecognizer speechRecognizer,string replaceType)
         {
             Choices phoneticAlphabet = new Choices(new string[] { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet","Kilo","Lima","Mike","November","Oscar","Papa","Qubec","Romeo","Sierra","Tango","Uniform","Victor","Whiskey","X-ray","Yankee","Zulu" });
             GrammarBuilder grammarBuilder2 = new GrammarBuilder();
@@ -504,7 +542,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             Choices phoneticAlphabet2to7 = new Choices(new GrammarBuilder[] { grammarBuilder2, grammarBuilder3, grammarBuilder4,grammarBuilder5,grammarBuilder6,grammarBuilder7 });
             Grammar grammarPhoneticAlphabets = new Grammar((GrammarBuilder)phoneticAlphabet2to7);
             grammarPhoneticAlphabets.Name = "Phonetic Alphabet";
-            speechRecognitionEngine.LoadGrammarAsync(grammarPhoneticAlphabets);
+            speechRecognizer.LoadGrammarAsync(grammarPhoneticAlphabets);
 
             Choices choices = new Choices("Lower");
             GrammarBuilder grammarBuilderLower2 = new GrammarBuilder();
@@ -549,7 +587,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             Choices phoneticAlphabetLower2to7 = new Choices(new GrammarBuilder[] { grammarBuilderLower2, grammarBuilderLower3, grammarBuilderLower4, grammarBuilderLower5, grammarBuilderLower6, grammarBuilderLower7 });
             Grammar grammarPhoneticAlphabetsLower = new Grammar((GrammarBuilder)phoneticAlphabetLower2to7);
             grammarPhoneticAlphabetsLower.Name = "Phonetic Alphabet Lower";
-            speechRecognitionEngine.LoadGrammarAsync(grammarPhoneticAlphabetsLower);
+            speechRecognizer.LoadGrammarAsync(grammarPhoneticAlphabetsLower);
             this.WriteCommandLine("<Alpha-Zulu 2-7>");
         }
 
@@ -625,6 +663,14 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private void SpeechRecognitionEngine_SpeechRecognized(object sender, SpeechRecognizedEventArgs e)
         {
             UpdateCurrentProcess();
+            try
+            {
+                SpeechUI.SendTextFeedback(e.Result, $"Recognised: {e.Result.Text}", true);
+            }
+            catch (Exception)
+            {
+                //This will fail if were using the engine
+            }
             this.WriteLine($"Recognised: {e.Result.Text}");
             this.WriteLine($"Confidence: {e.Result.Confidence}");
             if (e.Result.Text.ToLower() == "keyboard" && e.Result.Confidence > 0.5)
@@ -634,23 +680,35 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 UnloadGrammarsAndClearCommands();
                 LoadGrammarKeyboard();
             }
-            else if (e.Result.Grammar.Name=="Symbols" && e.Result.Confidence>0.8)
+            else if (e.Result.Grammar.Name=="Mouse Command" && e.Result.Confidence>0.4)
+            {
+                PerformMouseCommand(e);
+            }
+            else if (e.Result.Grammar.Name == "Symbols" && e.Result.Confidence > 0.3)
             {
                 PerformanceSymbolsCommand(e);
             }
-            else if (e.Result.Text.ToLower().StartsWith("replace")  && e.Result.Grammar.Name== "Replace Letters" && e.Result.Confidence>0.8)
+            else if (e.Result.Grammar.Name.ToLower() == "camel case" && e.Result.Confidence > 0.3 )
             {
-                SetupReplaceText(e,"Replace");
+                CamelCaseCommand(e);
             }
-            else if (e.Result.Text.ToLower().StartsWith("with this") && e.Result.Grammar.Name=="Replace Letters"  && e.Result.Confidence>0.8)
+            else if (e.Result.Grammar.Name.ToLower() == "variable" && e.Result.Confidence > 0.3)
+            {
+                VariableCommand(e);
+            }
+            else if (e.Result.Text.ToLower().StartsWith("replace") && e.Result.Grammar.Name == "Replace Letters" && e.Result.Confidence > 0.8)
+            {
+                SetupReplaceText(e, "Replace");
+            }
+            else if (e.Result.Text.ToLower().StartsWith("with this") && e.Result.Grammar.Name == "Replace Letters" && e.Result.Confidence > 0.8)
             {
                 SetupReplaceText(e, "With this");
             }
-            else if (e.Result.Text.ToLower()=="perform replacement" && e.Result.Confidence>0.8)
+            else if (e.Result.Text.ToLower() == "perform replacement" && e.Result.Confidence > 0.8)
             {
                 PerformReplacement();
             }
-            else if (e.Result.Text.ToLower()=="windows speech recognition")
+            else if (e.Result.Text.ToLower() == "windows speech recognition")
             {
                 StartWindowsSpeechRecognition();
             }
@@ -660,30 +718,30 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 UnloadGrammarsAndClearCommands();
                 LoadGrammarLauncher();
             }
-            else if (e.Result.Text.ToLower().StartsWith("filter ") && e.Result.Confidence > 0.5 || (e.Result.Grammar.Name.Contains("Phonetic Alphabet")  && isKeyboard==false))
+            else if (e.Result.Text.ToLower().StartsWith("filter ") && e.Result.Confidence > 0.5 || (e.Result.Grammar.Name.Contains("Phonetic Alphabet") && isKeyboard == false))
             {
                 filterInProgress = true;
-                var     filterBy = e.Result.Text.ToLower().Replace("filter ", "").Replace("lower","");
+                var filterBy = e.Result.Text.ToLower().Replace("filter ", "").Replace("lower", "");
                 if (e.Result.Grammar.Name.Contains("Phonetic Alphabet"))
                 {
                     filterBy = Get1stLetterFromPhoneticAlphabet(e, filterBy).ToLower();
                 }
-                if (launcherCategoryMatched==true)
+                if (launcherCategoryMatched == true)
                 {
                     ShowLauncherOptions(lastLauncherCategory, filterBy);
                 }
                 else
                 {
-                    ListCommandsInLanguageAndCategory($"{languageMatched} {categoryMatched}",filterBy);
+                    ListCommandsInLanguageAndCategory($"{languageMatched} {categoryMatched}", filterBy);
                 }
             }
             else if (e.Result.Text.ToLower().StartsWith("launcher ") && e.Result.Confidence > 0.5)
             {
                 var result = e.Result.Text.ToLower();
                 result = result.Replace("launcher ", "");
-                ShowLauncherOptions(result,  null );
+                ShowLauncherOptions(result, null);
             }
-            else if ((e.Result.Text.ToLower().StartsWith("press ") && e.Result.Confidence > 0.5) || (e.Result.Grammar.Name.Contains("Phonetic Alphabet"))  && isKeyboard == true)
+            else if ((e.Result.Text.ToLower().StartsWith("press ") && e.Result.Confidence > 0.5) || (e.Result.Grammar.Name.Contains("Phonetic Alphabet")) && isKeyboard == true)
             {
                 UpdateCurrentProcess();
                 ProcessKeyboardCommand(e);
@@ -715,7 +773,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 QuitApplication();
             }
-            else if ((e.Result.Text.ToLower() == "start emergency speech" && e.Result.Confidence > 0.975) || (e.Result.Text.ToLower() == "list commands" && e.Result.Confidence > 0.985))
+            else if ((e.Result.Text.ToLower() == "start emergency speech" && e.Result.Confidence > 0.84) || (e.Result.Text.ToLower() == "list commands" && e.Result.Confidence > 0.84))
             {
                 launcherCategoryMatched = false;
                 UnloadGrammarsAndClearCommands();
@@ -731,10 +789,10 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 var choiceNumber = Int32.Parse(e.Result.Text.Substring(7));
                 isKeyboard = false;
-                    if (lastResult != null && choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1))
-                    {
-                        Dispatcher.Invoke(() => { finalResult.Text = lastResult.PhraseResponse.Results[choiceNumber].DisplayText; });
-                    }
+                if (lastResult != null && choiceNumber <= (lastResult.PhraseResponse.Results.Length - 1))
+                {
+                    Dispatcher.Invoke(() => { finalResult.Text = lastResult.PhraseResponse.Results[choiceNumber].DisplayText; });
+                }
             }
             else if (e.Result.Text.ToLower() == "transfer as paragraph" && e.Result.Confidence > 0.9)
             {
@@ -751,12 +809,12 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 isKeyboard = false;
                 ToggleRemovePunctuation();
             }
-            else if (e.Result.Text.ToLower()=="camel case" && e.Result.Confidence>0.9)
+            else if (e.Result.Text.ToLower() == "camel case" && e.Result.Confidence > 0.9)
             {
                 isKeyboard = false;
                 ToggleCamelCase();
             }
-            else if (e.Result.Text.ToLower()=="variable" && e.Result.Confidence>0.9)
+            else if (e.Result.Text.ToLower() == "variable" && e.Result.Confidence > 0.9)
             {
                 isKeyboard = false;
                 ToggleVariable();
@@ -768,6 +826,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             else if ((e.Result.Text.ToLower() == "grammar mode" && e.Result.Confidence > 0.965) || (e.Result.Text.ToLower() == "stop launcher" && e.Result.Confidence > 0.96))
             {
+                speechRecognitionEngine.UnloadAllGrammars();
+                speechRecognitionEngine.RecognizeAsyncStop();
                 ListMainMenuCommands();
                 launcherCategoryMatched = false;
                 isKeyboard = false;
@@ -818,22 +878,23 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 isKeyboard = false;
                 GoDormant();
             }
-            else if (e.Result.Text == "Stop IntelliSense" || e.Result.Text == "Stop Keyboard")
+            else if (e.Result.Text == "Stop IntelliSense" || e.Result.Text == "Stop Keyboard" || e.Result.Text == "Stop Launcher")
             {
                 isKeyboard = false;
-                speechRecognitionEngine.RecognizeAsyncCancel();
+
+                //speechRecognizer.RecognizeAsyncCancel();
                 ListMainMenuCommands();
-                speechRecognitionEngine.SetInputToDefaultAudioDevice();
-                speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
+                //speechRecognizer.SetInputToDefaultAudioDevice();
+                //speechRecognizer.RecognizeAsync(RecognizeMode.Multiple);
                 languageAndCategoryAlreadyMatched = false;
             }
-            else if (languageAndCategoryAlreadyMatched == true && e.Result.Confidence>0.6)
+            else if (languageAndCategoryAlreadyMatched == true && e.Result.Confidence > 0.6)
             {
                 isKeyboard = false;
                 filterInProgress = false;
                 PerformGlobalIntelliSense(e);
             }
-            else if (launcherCategoryMatched == true && e.Result.Confidence>0.9)
+            else if (launcherCategoryMatched == true && e.Result.Confidence > 0.9)
             {
                 LaunchApplication(e.Result.Text);
                 ListMainMenuCommands();
@@ -842,7 +903,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             else
             {
                 isKeyboard = false;
-                ListCommandsInLanguageAndCategory(e.Result.Text, null );
+                ListCommandsInLanguageAndCategory(e.Result.Text, null);
             }
 
             if (e.Result.Text.ToLower()!="go dormant")
@@ -850,6 +911,331 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 lastCommand = e.Result.Text.ToLower();
                 lastRecognition = e;
             }
+        }
+
+        private void PerformMouseCommand(SpeechRecognizedEventArgs e)
+        {
+            Win32.POINT p = new Win32.POINT();
+            p.x = 100;
+            p.y = 100;
+            var horizontalCoordinate = e.Result.Words[1].Text;
+            if (horizontalCoordinate=="Zero")
+            {
+                p.x = 5;
+            }
+            else if (horizontalCoordinate=="Alpha")
+            {
+                p.x = 50;
+            }
+            else if (horizontalCoordinate == "Bravo")
+            {
+                p.x = 100;
+            }
+            else if (horizontalCoordinate=="Charlie")
+            {
+                p.x = 150;
+            }
+            else if (horizontalCoordinate=="Delta")
+            {
+                p.x = 200;
+            }
+            else if (horizontalCoordinate=="Echo")
+            {
+                p.x = 250;
+            }
+            else if (horizontalCoordinate=="FoxTrot")
+            {
+                p.x = 300;
+            }
+            else if (horizontalCoordinate=="Golf")
+            {
+                p.x = 350;
+            }
+            else if (horizontalCoordinate=="Hotel")
+            {
+                p.x = 400;
+            }
+            else if (horizontalCoordinate == "India")
+            {
+                p.x = 450;
+            }
+            else if (horizontalCoordinate == "Juliet")
+            {
+                p.x = 500;
+            }
+            else if (horizontalCoordinate == "Kilo")
+            {
+                p.x = 550;
+            }
+            else if (horizontalCoordinate == "Lima")
+            {
+                p.x = 600;
+            }
+            else if (horizontalCoordinate == "Mike")
+            {
+                p.x = 650;
+            }
+            else if (horizontalCoordinate == "November")
+            {
+                p.x = 700;
+            }
+            else if (horizontalCoordinate == "Oscar")
+            {
+                p.x = 750;
+            }
+            else if (horizontalCoordinate == "Papa")
+            {
+                p.x = 800;
+            }
+            else if (horizontalCoordinate == "Qubec")
+            {
+                p.x = 850;
+            }
+            else if (horizontalCoordinate == "Romeo")
+            {
+                p.x = 900;
+            }
+            else if (horizontalCoordinate == "Sierra")
+            {
+                p.x = 950;
+            }
+            else if (horizontalCoordinate == "Tango")
+            {
+                p.x = 1000;
+            }
+            else if (horizontalCoordinate == "Uniform")
+            {
+                p.x = 1050;
+            }
+            else if (horizontalCoordinate == "Victor")
+            {
+                p.x = 1100;
+            }
+            else if (horizontalCoordinate == "Whiskey")
+            {
+                p.x = 1150;
+            }
+            else if (horizontalCoordinate == "X-ray")
+            {
+                p.x = 1200;
+            }
+            else if (horizontalCoordinate == "Yankee")
+            {
+                p.x = 1250;
+            }
+            else if (horizontalCoordinate == "Zulu")
+            {
+                p.x = 1300;
+            }
+            else if (horizontalCoordinate == "1")
+            {
+                p.x = 1350;
+            }
+            else if (horizontalCoordinate == "2")
+            {
+                p.x = 1400;
+            }
+            else if (horizontalCoordinate == "3")
+            {
+                p.x = 1450;
+            }
+            else if (horizontalCoordinate == "4")
+            {
+                p.x = 1500;
+            }
+            else if (horizontalCoordinate == "5")
+            {
+                p.x = 1550;
+            }
+            else if (horizontalCoordinate == "6")
+            {
+                p.x = 1600;
+            }
+            else if (horizontalCoordinate == "7")
+            {
+                p.x = 1650;
+            }
+            var verticalCoordinate = e.Result.Words[2].Text;
+            if (verticalCoordinate=="Zero")
+            {
+                p.y = 5;
+            }
+            else if (verticalCoordinate=="Alpha")
+            {
+                p.y = 50;
+            }
+            else if (verticalCoordinate=="Bravo")
+            {
+                p.y = 100;
+            }
+            else if (verticalCoordinate == "Charlie")
+            {
+                p.y = 150;
+            }
+            else if (verticalCoordinate == "Delta")
+            {
+                p.y = 200;
+            }
+            else if (verticalCoordinate == "Echo")
+            {
+                p.y = 250;
+            }
+            else if (verticalCoordinate == "FoxTrot")
+            {
+                p.y = 300;
+            }
+            else if (verticalCoordinate == "Golf")
+            {
+                p.y = 350;
+            }
+            else if (verticalCoordinate == "Hotel")
+            {
+                p.y = 400;
+            }
+            else if (verticalCoordinate == "India")
+            {
+                p.y = 450;
+            }
+            else if (verticalCoordinate == "Juliet")
+            {
+                p.y = 500;
+            }
+            else if (verticalCoordinate == "Kilo")
+            {
+                p.y = 550;
+            }
+            else if (verticalCoordinate == "Lima")
+            {
+                p.y = 600;
+            }
+            else if (verticalCoordinate == "Mike")
+            {
+                p.y = 650;
+            }
+            else if (verticalCoordinate == "November")
+            {
+                p.y = 700;
+            }
+            else if (verticalCoordinate == "Oscar")
+            {
+                p.y = 750;
+            }
+            else if (verticalCoordinate == "Papa")
+            {
+                p.y = 800;
+            }
+            else if (verticalCoordinate == "Qubec")
+            {
+                p.y = 850;
+            }
+            else if (verticalCoordinate == "Romeo")
+            {
+                p.y = 900;
+            }
+            else if (verticalCoordinate == "Sierra")
+            {
+                p.y = 950;
+            }
+            else if (verticalCoordinate == "Tango")
+            {
+                p.y = 1000;
+            }
+            else if (verticalCoordinate == "Uniform")
+            {
+                p.y = 1050;
+            }
+            else if (verticalCoordinate == "Victor")
+            {
+                p.y = 1100;
+            }
+            else if (verticalCoordinate == "Whiskey")
+            {
+                p.y = 1150;
+            }
+            else if (verticalCoordinate == "X-ray")
+            {
+                p.y = 1200;
+            }
+            else if (verticalCoordinate == "Yankee")
+            {
+                p.y = 1250;
+            }
+            else if (verticalCoordinate == "Zulu")
+            {
+                p.y = 1300;
+            }
+            else if (verticalCoordinate == "1")
+            {
+                p.y = 1350;
+            }
+            else if (verticalCoordinate == "2")
+            {
+                p.y = 1400;
+            }
+            else if (verticalCoordinate == "3")
+            {
+                p.y = 1450;
+            }
+            else if (verticalCoordinate == "4")
+            {
+                p.y = 1500;
+            }
+            else if (verticalCoordinate == "5")
+            {
+                p.y = 1550;
+            }
+            else if (verticalCoordinate == "6")
+            {
+                p.y = 1600;
+            }
+            else if (verticalCoordinate == "7")
+            {
+                p.y = 1650;
+            }
+            var screen = e.Result.Words[0].Text;
+            if (screen=="Screen" || screen=="Touch")
+            {
+                p.x = p.x + 1680;
+            }
+
+            Win32.SetCursorPos(p.x, p.y);
+            SpeechUI.SendTextFeedback(e.Result, $" {e.Result.Text} H{p.x} V{p.y}",false);
+            if (screen=="Click" || screen=="Touch")
+            {
+                Win32.mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, (uint)p.x, (uint)p.y, 0, 0);
+            }
+        }
+
+        private void VariableCommand(SpeechRecognizedEventArgs e)
+        {
+            var value = "";
+            foreach (var word in e.Result.Words.Where(w => w.Text.ToLower()!="variable"))
+            {
+                value = value + word.Text.Substring(0, 1).ToUpper() + word.Text.Substring(1).ToLower();
+            }
+            List<string> keys = new List<string> { value };
+            SendKeysCustom(null, null, keys, currentProcess.ProcessName);
+        }
+
+
+        private void CamelCaseCommand(SpeechRecognizedEventArgs e)
+        {
+            var value = "";
+            var counter = 0;
+            foreach (var word in e.Result.Words.Where(w => w.Text.ToLower()!="camel" && w.Text.ToLower()!="case"))
+            {
+                counter++;
+                if (counter==1)
+                {
+                    value = word.Text.ToLower();
+                }
+                else
+                {
+                    value = value + word.Text.Substring(0, 1).ToUpper() + word.Text.Substring(1).ToLower();
+                }
+            }
+            List<string> keys = new List<string> { value };
+            SendKeysCustom(null, null, keys, currentProcess.ProcessName);
         }
 
         private void PerformanceSymbolsCommand(SpeechRecognizedEventArgs e)
@@ -986,77 +1372,182 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         private void StartWindowsSpeechRecognition()
         {
-            speechRecognitionEngine.RecognizeAsyncCancel();
-            speechRecognitionEngine.UnloadAllGrammars();
-            speechRecognitionEngine.Dispose();
-            using (recognizer = new SpeechRecognizer())
+            //speechRecognitionEngine.RecognizeAsyncCancel();
+            //speechRecognitionEngine.UnloadAllGrammars();
+            //speechRecognitionEngine.Dispose();
+            try
             {
+                speechRecognizer = new SpeechRecognizer();
+            }
+            catch (Exception exception)
+            {
+                System.Windows.MessageBox.Show($"Error loading Windows Speech Recognition {exception.Message}","Error",MessageBoxButton.OK,MessageBoxImage.Error );
+                return;
+            }
+            //Wildcard wildcard = new Wildcard();
+            //Grammar grammar = wildcard.CreatePasswordGrammar();
+            //speechRecognizer.LoadGrammarAsync(grammar);
+            // Create and load a sample grammar.  
+            //Grammar testGrammar =
+            //  new Grammar(new GrammarBuilder("testing testing"));
+            //testGrammar.Name = "Test Grammar";
+            //recognizer.LoadGrammar(testGrammar);
 
-                // Create and load a sample grammar.  
-                //Grammar testGrammar =
-                //  new Grammar(new GrammarBuilder("testing testing"));
-                //testGrammar.Name = "Test Grammar";
-                //recognizer.LoadGrammar(testGrammar);
+            // Attach event handlers for recognition events.  
+            //speechRecognizer.SpeechRecognized +=
+            //      new EventHandler<SpeechRecognizedEventArgs>(
+            //        SpeechRecognitionEngine_SpeechRecognized);
+            //recognizer.SpeechRecognized +=
+            //  new EventHandler<SpeechRecognizedEventArgs>(
+            //    SpeechRecognizedHandler);
+            //speechRecognizer.EmulateRecognizeCompleted +=
+            //      new EventHandler<EmulateRecognizeCompletedEventArgs>(
+            //        EmulateRecognizeCompletedHandler);
 
-                // Attach event handlers for recognition events.  
-                recognizer.SpeechRecognized +=
-                  new EventHandler<SpeechRecognizedEventArgs>(
-                    SpeechRecognizedHandler);
-                recognizer.EmulateRecognizeCompleted +=
-                  new EventHandler<EmulateRecognizeCompletedEventArgs>(
-                    EmulateRecognizeCompletedHandler);
+            //completed = false;
+            isKeyboard = true;
+            //        Start asynchronous emulated recognition.   
+            //         This matches the grammar and generates a SpeechRecognized event.  
+            //speechRecognizer.EmulateRecognizeAsync("testing testing");
+            //         Check to see if recognizer is loaded, wait if it is not loaded.
+            //System.Windows.MessageBox.Show($"The current state is: {speechRecognizer.State}");
+            //if (speechRecognizer.State != RecognizerState.Listening)
+            //    {
+            //        Thread.Sleep(5000);
+            //        // Put recognizer in lisHer job page of onto pressed her job stop listening wake up stopped listening wake up tening state.  
+            //        speechRecognizer.EmulateRecognizeAsync("Start listening");
+            //    }
+            //    else
+            //    {
+            //        speechRecognizer.EmulateRecognizeAsync("Start listening");
 
-                completed = false;
+            //}
+            
+        }
 
-                // Start asynchronous emulated recognition.   
-                // This matches the grammar and generates a SpeechRecognized event.  
-                //recognizer.EmulateRecognizeAsync("testing testing");
-                // Check to see if recognizer is loaded, wait if it is not loaded.  
-                if (recognizer.State != RecognizerState.Listening)
-                {
-                    Thread.Sleep(5000);
+        private void BuildPhoneticAlphabetGrammars(bool useEngine= false)
+        {
+            Choices phoneticAlphabet = new Choices(new string[] { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Qubec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu" });
+            GrammarBuilder grammarBuilder2 = new GrammarBuilder();
+            grammarBuilder2.Append(phoneticAlphabet);
+            grammarBuilder2.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilder3 = new GrammarBuilder();
+            grammarBuilder3.Append(phoneticAlphabet);
+            grammarBuilder3.Append(phoneticAlphabet);
+            grammarBuilder3.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilder4 = new GrammarBuilder();
+            grammarBuilder4.Append(phoneticAlphabet);
+            grammarBuilder4.Append(phoneticAlphabet);
+            grammarBuilder4.Append(phoneticAlphabet);
+            grammarBuilder4.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilder5 = new GrammarBuilder();
+            grammarBuilder5.Append(phoneticAlphabet);
+            grammarBuilder5.Append(phoneticAlphabet);
+            grammarBuilder5.Append(phoneticAlphabet);
+            grammarBuilder5.Append(phoneticAlphabet);
+            grammarBuilder5.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilder6 = new GrammarBuilder();
+            grammarBuilder6.Append(phoneticAlphabet);
+            grammarBuilder6.Append(phoneticAlphabet);
+            grammarBuilder6.Append(phoneticAlphabet);
+            grammarBuilder6.Append(phoneticAlphabet);
+            grammarBuilder6.Append(phoneticAlphabet);
+            grammarBuilder6.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilder7 = new GrammarBuilder();
+            grammarBuilder7.Append(phoneticAlphabet);
+            grammarBuilder7.Append(phoneticAlphabet);
+            grammarBuilder7.Append(phoneticAlphabet);
+            grammarBuilder7.Append(phoneticAlphabet);
+            grammarBuilder7.Append(phoneticAlphabet);
+            grammarBuilder7.Append(phoneticAlphabet);
+            grammarBuilder7.Append(phoneticAlphabet);
+            Choices phoneticAlphabet2to7 = new Choices(new GrammarBuilder[] { grammarBuilder2, grammarBuilder3, grammarBuilder4, grammarBuilder5, grammarBuilder6, grammarBuilder7 });
+            Grammar grammarPhoneticAlphabets = new Grammar((GrammarBuilder)phoneticAlphabet2to7);
+            grammarPhoneticAlphabets.Name = "Phonetic Alphabet";
+            if (useEngine==true)
+            {
+                speechRecognitionEngine.LoadGrammarAsync(grammarPhoneticAlphabets);
+            }
+            else
+            {
+                speechRecognizer.LoadGrammarAsync(grammarPhoneticAlphabets);
+            }
 
-                    // Put recognizer in listening state.  
-                    recognizer.EmulateRecognizeAsync("Start listening");
-                }
-
-                if (recognizer.State!=RecognizerState.Listening)
-                {
-                    recognizer.EmulateRecognizeAsync("Open Notepad");
-                }
-
-                // Wait for the asynchronous operation to complete.  
-                while (!completed)
-                {
-                    Thread.Sleep(9333);
-                }
-                recognizer.EmulateRecognizeAsync("Start listening");
-                QuitApplication();
-
-
+            Choices choices = new Choices("Lower");
+            GrammarBuilder grammarBuilderLower2 = new GrammarBuilder();
+            grammarBuilderLower2.Append(choices);
+            grammarBuilderLower2.Append(phoneticAlphabet);
+            grammarBuilderLower2.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilderLower3 = new GrammarBuilder();
+            grammarBuilderLower3.Append(choices);
+            grammarBuilderLower3.Append(phoneticAlphabet);
+            grammarBuilderLower3.Append(phoneticAlphabet);
+            grammarBuilderLower3.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilderLower4 = new GrammarBuilder();
+            grammarBuilderLower4.Append(choices);
+            grammarBuilderLower4.Append(phoneticAlphabet);
+            grammarBuilderLower4.Append(phoneticAlphabet);
+            grammarBuilderLower4.Append(phoneticAlphabet);
+            grammarBuilderLower4.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilderLower5 = new GrammarBuilder();
+            grammarBuilderLower5.Append(choices);
+            grammarBuilderLower5.Append(phoneticAlphabet);
+            grammarBuilderLower5.Append(phoneticAlphabet);
+            grammarBuilderLower5.Append(phoneticAlphabet);
+            grammarBuilderLower5.Append(phoneticAlphabet);
+            grammarBuilderLower5.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilderLower6 = new GrammarBuilder();
+            grammarBuilderLower6.Append(choices);
+            grammarBuilderLower6.Append(phoneticAlphabet);
+            grammarBuilderLower6.Append(phoneticAlphabet);
+            grammarBuilderLower6.Append(phoneticAlphabet);
+            grammarBuilderLower6.Append(phoneticAlphabet);
+            grammarBuilderLower6.Append(phoneticAlphabet);
+            grammarBuilderLower6.Append(phoneticAlphabet);
+            GrammarBuilder grammarBuilderLower7 = new GrammarBuilder();
+            grammarBuilderLower7.Append(choices);
+            grammarBuilderLower7.Append(phoneticAlphabet);
+            grammarBuilderLower7.Append(phoneticAlphabet);
+            grammarBuilderLower7.Append(phoneticAlphabet);
+            grammarBuilderLower7.Append(phoneticAlphabet);
+            grammarBuilderLower7.Append(phoneticAlphabet);
+            grammarBuilderLower7.Append(phoneticAlphabet);
+            grammarBuilderLower7.Append(phoneticAlphabet);
+            Choices phoneticAlphabetLower2to7 = new Choices(new GrammarBuilder[] { grammarBuilderLower2, grammarBuilderLower3, grammarBuilderLower4, grammarBuilderLower5, grammarBuilderLower6, grammarBuilderLower7 });
+            Grammar grammarPhoneticAlphabetsLower = new Grammar((GrammarBuilder)phoneticAlphabetLower2to7);
+            grammarPhoneticAlphabetsLower.Name = "Phonetic Alphabet Lower";
+            if (useEngine == true)
+            {
+                speechRecognitionEngine.LoadGrammarAsync(grammarPhoneticAlphabetsLower);
+            }
+            else
+            {
+                speechRecognizer.LoadGrammarAsync(grammarPhoneticAlphabetsLower);
             }
         }
 
         private void EmulateRecognizeCompletedHandler(object sender, EmulateRecognizeCompletedEventArgs e)
         {
             completed = true;
+
         }
 
         private void SpeechRecognizedHandler(object sender, SpeechRecognizedEventArgs e)
         {
-            recognizer.Dispose();
+
+            //recognizer.Dispose();
             completed = false;
         }
         private void GoDormant()
         {
             //this._mainWindow.Topmost = false;
-            this._mainWindow.Hide();
+            //this._mainWindow.Hide();
             UnloadGrammarsAndClearCommands();
             Choices choices = new Choices();
             choices.Add("start emergency speech");
             this.WriteCommandLine("Start Emergency Speech");
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
-            speechRecognitionEngine.LoadGrammarAsync(grammar);
+            speechRecognizer.LoadGrammarAsync(grammar);
             this.WriteLine("****Pressing the / Key on the number pad****");
             List<string> keys = new List<string>(new string[] { "{DIVIDE}" });
             SendKeysCustom(null, null, keys, currentProcess.ProcessName);
@@ -1066,7 +1557,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private void StartWithIntentMode()
         {
             isKeyboard = false;
-            speechRecognitionEngine.RecognizeAsyncStop();
+            //speechRecognizer.RecognizeAsyncStop();
             this.IsMicrophoneClientShortPhrase = false;
             this.IsMicrophoneClientWithIntent = true;
             this.IsMicrophoneClientDictation = false;
@@ -1088,12 +1579,16 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         private void StartLongDictationMode()
         {
-            speechRecognitionEngine.UnloadAllGrammars();
+            speechRecognizer.EmulateRecognize("Stop listening");            
+            speechRecognizer.UnloadAllGrammars();
+
+            
+            speechRecognitionEngine.SpeechRecognized += new EventHandler<SpeechRecognizedEventArgs>(SpeechRecognitionEngine_SpeechRecognized);
             Dispatcher.Invoke(() =>
             {
                 Commands.Text = "";
             });
-            speechRecognitionEngine.RecognizeAsyncStop();
+            //speechRecognizer.RecognizeAsyncStop();
             this.IsMicrophoneClientShortPhrase = false;
             this.IsMicrophoneClientWithIntent = false;
             this.IsMicrophoneClientDictation = true;
@@ -1110,7 +1605,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             IInvokeProvider invokeProvider = peer.GetPattern(PatternInterface.Invoke) as IInvokeProvider;
             invokeProvider.Invoke();
             dispatcherTimer.Start();
-            LoadGrammarKeyboard(false);
+            LoadGrammarKeyboard(false,false);
             Choices choices = SetupDictationGrammarCommands();
             for (int i = 0; i < 6; i++)
             {
@@ -1120,6 +1615,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
             speechRecognitionEngine.LoadGrammarAsync(grammar);
+            speechRecognitionEngine.SetInputToDefaultAudioDevice();
             speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
         }
 
@@ -1174,8 +1670,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         private void StartShortPhraseMode()
         {
-            speechRecognitionEngine.UnloadAllGrammars();
-            speechRecognitionEngine.RecognizeAsyncStop();
+            speechRecognizer.UnloadAllGrammars();
+            //speechRecognizer.RecognizeAsyncStop();
 
             this.IsMicrophoneClientShortPhrase = true;
             this.IsMicrophoneClientWithIntent = false;
@@ -1207,10 +1703,10 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
 
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
-            speechRecognitionEngine.LoadGrammarAsync(grammar);
-            speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
+            speechRecognizer.LoadGrammarAsync(grammar);
+            //speechRecognizer.RecognizeAsync(RecognizeMode.Multiple);
         }
-        private void SetUpSymbolGrammarCommands()
+        private void SetUpSymbolGrammarCommands(bool useEngine)
         {
             Choices choices = new Choices();
             choices.Add("Square Brackets");
@@ -1236,8 +1732,27 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             grammarBuilder.Append(choicesInOut);
             Grammar grammarSymbols = new Grammar((GrammarBuilder)grammarBuilder);
             grammarSymbols.Name = "Symbols";
-            speechRecognitionEngine.LoadGrammarAsync(grammarSymbols);
+            if (useEngine==true)
+            {
+                speechRecognitionEngine.LoadGrammarAsync(grammarSymbols);
+            }
+            else
+            {
+                speechRecognizer.LoadGrammarAsync(grammarSymbols);
+            }
         }
+
+        private void CreateDictationGrammar(string initialPhrase, string grammarName)
+        {
+            GrammarBuilder grammarBuilder= new GrammarBuilder();
+            grammarBuilder.Append(new Choices(initialPhrase));
+            grammarBuilder.AppendDictation();
+
+            Grammar grammar = new Grammar((GrammarBuilder)grammarBuilder);
+            grammar.Name = grammarName;
+            speechRecognizer.LoadGrammarAsync(grammar);
+        }
+
 
         private Choices SetupDictationGrammarCommands()
         {
@@ -1299,7 +1814,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             //this._mainWindow.IsVisible=true;
 
 
-            this._mainWindow.Topmost = true;
+            //this._mainWindow.Topmost = true;
             this._mainWindow.Show();
             //SetForegroundWindow(currentProcess.Handle);
             this.WriteLine("****Pressing the / Key on the number pad****");
@@ -1542,16 +2057,16 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         private void UnloadGrammarsAndClearCommands()
         {
-            speechRecognitionEngine.UnloadAllGrammars();
+            speechRecognizer.UnloadAllGrammars();
             Dispatcher.Invoke(() =>
             {
                 Commands.Text = "";
             });
         }
 
-        private void ShowLauncherOptions(string result, string filterBy)
+        private void ShowLauncherOptions(string result, string filterBy,bool useEngine= false)
         {
-            speechRecognitionEngine.UnloadAllGrammars();
+            speechRecognizer.UnloadAllGrammars();
             Choices choices = new Choices(); Dispatcher.Invoke(() =>
             {
                 Commands.Text = "";
@@ -1583,10 +2098,10 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this.WriteCommandLine("Go Dormant");
             choices.Add("Go Dormant");
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
-            speechRecognitionEngine.LoadGrammar(grammar);
+            speechRecognizer.LoadGrammar(grammar);
             launcherCategoryMatched = true;
             lastLauncherCategory = result;
-            BuildPhoneticAlphabetGrammars(speechRecognitionEngine);
+            BuildPhoneticAlphabetGrammars(useEngine);
             this.WriteLine($"Launcher set up for: {result}");
         }
 
@@ -1595,7 +2110,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             DictationGrammar spellingDictationGrammar = new DictationGrammar("grammar:dictation#spelling");
             spellingDictationGrammar.Name = "spelling dictation";
             spellingDictationGrammar.Enabled = true;
-            speechRecognitionEngine.LoadGrammar(spellingDictationGrammar);
+            speechRecognizer.LoadGrammar(spellingDictationGrammar);
             this.WriteCommandLine("<abc..>");
         }
 
@@ -1605,7 +2120,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             DictationGrammar dictationGrammar = new DictationGrammar("grammar:dictation");
             dictationGrammar.Name = "Filter Dictation";
             dictationGrammar.Enabled = true;
-            speechRecognitionEngine.LoadGrammar(dictationGrammar);
+            speechRecognizer.LoadGrammar(dictationGrammar);
             dictationGrammar.SetDictationContext("Filter", null);
             this.WriteCommandLine("Filter <dictation>");
         }
@@ -1839,10 +2354,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 this.dataClient.Dispose();
             }
-
             if (null != this.micClient)
             {
                 this.micClient.Dispose();
+            }
+            if (speechRecognizer!= null )
+            {
+                speechRecognizer.Dispose();
             }
 
             base.OnClosed(e);
@@ -1899,8 +2417,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this.Left = r.Left;
 
             ListMainMenuCommands();
-            speechRecognitionEngine.SetInputToDefaultAudioDevice();
-            speechRecognitionEngine.RecognizeAsync(RecognizeMode.Multiple);
+            //speechRecognizer.SetInputToDefaultAudioDevice();
+            //speechRecognizer.RecognizeAsync(RecognizeMode.Multiple);
             UpdateCurrentProcess();
             List<string> keys = new List<string>(new string[] { "{DIVIDE}" });
             SendKeysCustom(null, null, keys, currentProcess.ProcessName);
@@ -2277,7 +2795,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         }
 
-        private void ListCommandsInLanguageAndCategory(string phrase,string filterBy)
+        private void ListCommandsInLanguageAndCategory(string phrase,string filterBy,bool useEngine= false)
         {
             phrase = phrase.ToLower().Replace("intellisense", "not applicable");
             phrase = phrase.Replace("jay query", "jquery");
@@ -2311,7 +2829,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                                 {
                                     commands = db.tblCustomIntelliSenses.Where(i => i.Language_ID == language.ID && i.Category_ID == category.MenuNumber && (i.ComputerID== null || i.ComputerID==computerId)  ).OrderBy(s => s.Display_Value).ToList();
                                 }
-                                speechRecognitionEngine.UnloadAllGrammars();
+                                speechRecognizer.UnloadAllGrammars();
                                 Choices choices = new Choices();
                                 Dispatcher.Invoke(() =>
                                 {
@@ -2346,9 +2864,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                                 this.WriteCommandLine("Go Dormant");
                                 choices.Add("Go Dormant");
                                 Grammar grammar = new Grammar(new GrammarBuilder(choices));
-                                speechRecognitionEngine.LoadGrammar(grammar);
+                                speechRecognizer.LoadGrammar(grammar);
                                 this.WriteLine($"Language and Category: {languageMatched} {categoryMatched}");
-                                BuildPhoneticAlphabetGrammars(speechRecognitionEngine);
+                                BuildPhoneticAlphabetGrammars(useEngine);
                                 return;
                             }
                         }
@@ -2366,7 +2884,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 this.micClient.EndMicAndRecognition();
             }
             Choices choices = new Choices();
-            speechRecognitionEngine.UnloadAllGrammars();
+            speechRecognizer.UnloadAllGrammars();
             Dispatcher.Invoke(() =>
             {
                 Commands.Text = "";
@@ -2382,12 +2900,14 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             choices.Add("Restart Dragon");
             //this.WriteCommandLine($"With Intent Mode");
             //choices.Add("With Intent Mode");
-            this.WriteCommandLine($"Short Phrase Mode");
-            choices.Add("Short Phrase Mode");
+            //this.WriteCommandLine($"Short Phrase Mode");
+            //choices.Add("Short Phrase Mode");
             this.WriteCommandLine($"Long Dictation Mode");
             choices.Add("Long Dictation Mode");
-            this.WriteCommandLine($"Windows Speech Recognition");
-            choices.Add("Windows Speech Recognition");
+            //this.WriteCommandLine($"Windows Speech Recognition");
+            //choices.Add("Windows Speech Recognition");
+            CreateDictationGrammar("camel case", "camel case");
+            CreateDictationGrammar("variable", "variable");
             this.WriteCommandLine($"Global IntelliSense");
             choices.Add("Global IntelliSense");
             this.WriteCommandLine($"Visual Basic IntelliSense");
@@ -2405,20 +2925,54 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             this.WriteCommandLine($"List Commands");
             choices.Add("List Commands");
             Grammar grammar = new Grammar(new GrammarBuilder(choices));
-            speechRecognitionEngine.LoadGrammarAsync(grammar);
+            speechRecognizer.LoadGrammarAsync(grammar);
             LoadGrammarCustomIntellisense(null , false);
             LoadGrammarLauncher(false);
             LoadGrammarKeyboard(false);
-
+            LoadGrammarMouseCommands();
 
             dispatcherTimer.Stop();
+        }
+
+        private void LoadGrammarMouseCommands()
+        {
+            List<string> screenCoordinates = new List<string> { "Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliet", "Kilo", "Lima", "Mike", "November", "Oscar", "Papa", "Qubec", "Romeo", "Sierra", "Tango", "Uniform", "Victor", "Whiskey", "X-ray", "Yankee", "Zulu","1","2","3","4","5","6","7","Zero" };
+            Choices choices = new Choices();
+            List<string> monitorNames = new List<string> { "Arrow", "Screen","Click","Touch" };
+            foreach (var item in screenCoordinates)
+            {
+                foreach (var monitorName in monitorNames)
+                {
+                    foreach (var item2 in screenCoordinates)
+                    {
+                        if (item2=="Uniform")
+                        {
+                            break;
+                        }
+                        choices.Add($"{monitorName} {item} {item2}");
+                    }
+                }
+            }
+            GrammarBuilder grammarBuilder = new GrammarBuilder(choices);
+            Grammar grammar = new Grammar((GrammarBuilder)grammarBuilder);
+            grammar.Name = "Mouse Command";
+            speechRecognizer.LoadGrammarAsync(grammar);
         }
 
         private void AddApplicationsToKillToChoices(Choices choices)
         {
             using (var db = new MyDatabase())
             {
-                var applicationsToKill = db.ApplicationsToKill.Where(k => k.Display==true).OrderBy(k => k.CommandName).ToList();
+                List<ApplicationsToKill> applicationsToKill = null;
+                try
+                {
+                    applicationsToKill = db.ApplicationsToKill.Where(k => k.Display == true).OrderBy(k => k.CommandName).ToList();
+                }
+                catch (Exception  exception )
+                {
+                    System.Windows.MessageBox.Show($"There is a problem connecting to the database. {exception.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+                }
                 foreach (var application in applicationsToKill)
                 {
                     choices.Add($"kill {application.CommandName}");
