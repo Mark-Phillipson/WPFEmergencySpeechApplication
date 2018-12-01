@@ -2970,8 +2970,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 }
                 catch (Exception  exception )
                 {
-                    System.Windows.MessageBox.Show($"There is a problem connecting to the database. {exception.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-
+                    var message = exception.Message;
+                    if (exception.InnerException!= null )
+                    {
+                        message = message + Environment.NewLine + exception.InnerException.Message;
+                    }
+                    System.Windows.MessageBox.Show($"There is a problem connecting to the Microsoft SQL Server database. {message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    System.Windows.Application.Current.Shutdown();
                 }
                 foreach (var application in applicationsToKill)
                 {
