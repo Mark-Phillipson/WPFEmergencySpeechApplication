@@ -12,6 +12,9 @@ namespace SpeechToTextWPFSample
         [DllImport("User32.Dll")]
         public static extern long SetCursorPos(int x, int y);
 
+        [DllImport("user32.dll")]
+        public static extern bool GetCursorPos(out POINT lpPoint);
+
         [DllImport("User32.Dll")]
         public static extern bool ClientToScreen(IntPtr hWnd, ref POINT point);
 
