@@ -54,11 +54,11 @@
     <Compile Include="Models\ApplicationsToKill.cs" />
     <Compile Include="Models\Computer.cs" />
     <Compile Include="Models\MyDatabase.cs" />
-    <Compile Include="Models\tblCategory.cs" />
-    <Compile Include="Models\tblCustomIntelliSense.cs" />
-    <Compile Include="Models\tblLanguage.cs" />
-    <Compile Include="Models\tblLauncher.cs" />
-    <Compile Include="Models\tblMultipleLauncher.cs" />
+    <Compile Include="Models\Category.cs" />
+    <Compile Include="Models\CustomIntelliSense.cs" />
+    <Compile Include="Models\Language.cs" />
+    <Compile Include="Models\Launcher.cs" />
+    <Compile Include="Models\MultipleLauncher.cs" />
     <Compile Include="Models\Values_to_Insert.cs" />
     <Compile Include="Models\Wildcard.cs" />
     <Compile Include="Modifier.cs" />

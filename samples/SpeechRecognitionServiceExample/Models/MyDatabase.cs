@@ -12,11 +12,11 @@ namespace SpeechToTextWPFSample.Models
         {
         }
 
-        public virtual DbSet<tblCategory> tblCategories { get; set; }
-        public virtual DbSet<CustomIntelliSense> tblCustomIntelliSenses { get; set; }
-        public virtual DbSet<tblLanguage> tblLanguages { get; set; }
-        public virtual DbSet<tblLauncher> tblLaunchers { get; set; }
-        public virtual DbSet<tblMultipleLauncher> tblMultipleLaunchers { get; set; }
+        public virtual DbSet<Category> Categories { get; set; }
+        public virtual DbSet<CustomIntelliSense> CustomIntelliSenses { get; set; }
+        public virtual DbSet<Language> Languages { get; set; }
+        public virtual DbSet<Launcher> Launchers { get; set; }
+        public virtual DbSet<MultipleLauncher> MultipleLaunchers { get; set; }
         public virtual DbSet<Values_to_Insert> Values_to_Inserts { get; set; }
         public virtual DbSet<ApplicationsToKill> ApplicationsToKill { get; set; }
         public virtual DbSet<Computer> Computers { get; set; }
@@ -24,28 +24,6 @@ namespace SpeechToTextWPFSample.Models
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
 
-            modelBuilder.Entity<tblCategory>()
-                .HasMany(e => e.tblCustomIntelliSenses)
-                .WithOptional(e => e.tblCategory)
-                .HasForeignKey(e => e.Category_ID);
-
-            modelBuilder.Entity<tblCategory>()
-                .HasMany(e => e.tblLaunchers)
-                .WithOptional(e => e.tblCategory)
-                .HasForeignKey(e => e.Menu);
-
-            modelBuilder.Entity<CustomIntelliSense>()
-                .Property(e => e.SSMA_TimeStamp)
-                .IsFixedLength();
-
-            modelBuilder.Entity<tblLanguage>()
-                .HasMany(e => e.tblCustomIntelliSenses)
-                .WithOptional(e => e.tblLanguage)
-                .HasForeignKey(e => e.Language_ID);
-
-            modelBuilder.Entity<Values_to_Insert>()
-                .Property(e => e.RowVersion)
-                .IsFixedLength();
 
 
         }

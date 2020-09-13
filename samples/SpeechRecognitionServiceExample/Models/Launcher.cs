@@ -5,9 +5,8 @@ namespace SpeechToTextWPFSample.Models
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
     using System.Data.Entity.Spatial;
-
-    [Table("tblLauncher")]
-    public partial class tblLauncher
+    [Table("Launcher")]
+    public partial class Launcher
     {
         public int ID { get; set; }
 
@@ -20,10 +19,7 @@ namespace SpeechToTextWPFSample.Models
         [StringLength(255)]
         public string CommandLine { get; set; }
 
-        [StringLength(255)]
-        public string Icon { get; set; }
-
-        public short? Menu { get; set; }
+        public int? CategoryID { get; set; }
 
         public int? ML_IDDepreciated { get; set; }
 
@@ -31,6 +27,6 @@ namespace SpeechToTextWPFSample.Models
 
         public int? ComputerID { get; set; }
 
-        public virtual tblCategory tblCategory { get; set; }
+        public virtual Category Category { get; set; }
     }
 }

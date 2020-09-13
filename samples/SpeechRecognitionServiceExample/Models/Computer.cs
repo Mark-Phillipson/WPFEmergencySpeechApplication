@@ -12,7 +12,7 @@ namespace SpeechToTextWPFSample.Models
         public Computer()
         {
             CustomIntelliSenses = new HashSet<CustomIntelliSense>();
-            Launchers = new HashSet<tblLauncher>();
+            Launchers = new HashSet<Launcher>();
         }
         public int ID { get; set; }
 
@@ -24,6 +24,6 @@ namespace SpeechToTextWPFSample.Models
         public virtual ICollection<CustomIntelliSense> CustomIntelliSenses { get; set; }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public virtual ICollection<tblLauncher> Launchers { get; set; }
+        public virtual ICollection<Launcher> Launchers { get; set; }
     }
 }

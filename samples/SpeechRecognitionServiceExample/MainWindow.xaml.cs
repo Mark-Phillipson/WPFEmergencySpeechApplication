@@ -1,5 +1,5 @@
 ﻿//SpeechRecognitionEngine_SpeechRecognized does the main stuff of recognising commands
-// LoadGrammarKeyboard 
+// LoadGrammarKeyboard
 //   ??? <copyright file="MainWindow.xaml.cs" company="Microsoft">
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license.
@@ -90,9 +90,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         private const int MOUSEEVENTF_RIGHTDOWN = 0x08;
         private const int MOUSEEVENTF_RIGHTUP = 0x10;
 
-        private SpeechRecognitionEngine speechRecognitionEngine = new SpeechRecognitionEngine();
+        private readonly SpeechRecognitionEngine speechRecognitionEngine = new SpeechRecognitionEngine();
         private SpeechRecognizer speechRecognizer;
-        private SpeechSynthesizer SpeechSynthesizer = new SpeechSynthesizer();
+        // private readonly SpeechSynthesizer SpeechSynthesizer = new SpeechSynthesizer();
         private SpeechResponseEventArgs lastResult = null;
         /// <summary>
         /// The isolated storage subscription key file name.
@@ -157,16 +157,16 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             Choices choices = new Choices();
             using (var db = new MyDatabase())
             {
-                List<tblCategory> categories = null;
-                categories = db.tblCategories.Where(c => c.Category_Type == "Launch Applications").OrderBy(c => c.Category).ToList();
+                List<Category> categories = null;
+                categories = db.Categories.Where(c => c.Category_Type == "Launch Applications").OrderBy(c => c.CategoryName).ToList();
                 var computerId = db.Computers.Where(c => c.ComputerName == Environment.MachineName).FirstOrDefault()?.ID;
                 foreach (var category in categories)
                 {
-                    var count = db.tblLaunchers.Where(l => l.Menu == category.MenuNumber && (l.ComputerID == null || l.ComputerID == computerId)).Count();
-                    choices.Add($"Launcher {category.Category}");
+                    var count = db.Launchers.Where(l => l.CategoryID == category.ID && (l.ComputerID == null || l.ComputerID == computerId)).Count();
+                    choices.Add($"Launcher {category.CategoryName}");
                     if (showCommands == true)
                     {
-                        this.WriteCommandLine($"Launcher {category.Category} ({count})");
+                        this.WriteCommandLine($"Launcher {category.CategoryName} ({count})");
                     }
                 }
                 if (showCommands == true)
@@ -188,38 +188,38 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             Choices choices = new Choices();
             using (var db = new MyDatabase())
             {
-                List<tblLanguage> languages = null;
+                List<Language> languages = null;
                 if (specificLanguage != null)
                 {
-                    languages = db.tblLanguages.Where(l => l.Language == specificLanguage).OrderBy(l => l.Language).ToList();
+                    languages = db.Languages.Where(l => l.LanguageName == specificLanguage).OrderBy(l => l.LanguageName).ToList();
                 }
                 else
                 {
-                    languages = db.tblLanguages.Where(l => l.tblCustomIntelliSenses.Count > 0 && l.Active == true).OrderBy(l => l.Language).ToList();
+                    languages = db.Languages.Where(l => l.CustomIntelliSenses.Count > 0 && l.Active == true).OrderBy(l => l.LanguageName).ToList();
                 }
                 var computerId = db.Computers.Where(c => c.ComputerName == Environment.MachineName).FirstOrDefault()?.ID;
                 foreach (var language in languages)
                 {
-                    List<tblCategory> categories1 = db.tblCategories.OrderBy(c => c.Category).Where(c => c.tblCustomIntelliSenses.Count > 0 && c.Category_Type == "IntelliSense Command" && c.tblCustomIntelliSenses.Where(s => s.Language_ID == language.ID && (s.ComputerID == null || s.ComputerID == computerId)).Count() > 0).ToList();
+                    List<Category> categories1 = db.Categories.OrderBy(c => c.CategoryName).Where(c => c.CustomIntelliSenses.Count > 0 && c.Category_Type == "IntelliSense Command" && c.CustomIntelliSenses.Where(s => s.LanguageID == language.ID && (s.ComputerID == null || s.ComputerID == computerId)).Count() > 0).ToList();
                     foreach (var category in categories1)
                     {
-                        var tempLanguage = language.Language;
+                        var tempLanguage = language.LanguageName;
                         if (tempLanguage == "Not Applicable")
                         {
                             tempLanguage = "Intellisense";
                         }
-                        var count = db.tblCustomIntelliSenses.Where(s => s.Category_ID == category.MenuNumber && s.Language_ID == language.ID && (s.ComputerID == null || s.ComputerID == computerId)).Count();
-                        if (category.Category == "jQuery")
+                        var count = db.CustomIntelliSenses.Where(s => s.CategoryID == category.ID && s.LanguageID == language.ID && (s.ComputerID == null || s.ComputerID == computerId)).Count();
+                        if (category.CategoryName == "jQuery")
                         {
                             choices.Add($"{tempLanguage} {"Jay Query"}");
                         }
                         else
                         {
-                            choices.Add($"{tempLanguage} {category.Category}");
+                            choices.Add($"{tempLanguage} {category.CategoryName}");
                         }
                         if (showCommands == true)
                         {
-                            this.WriteCommandLine($"{tempLanguage} {category.Category} ({count})");
+                            this.WriteCommandLine($"{tempLanguage} {category.CategoryName} ({count})");
                         }
                     }
                 }
@@ -1509,13 +1509,13 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             //Wildcard wildcard = new Wildcard();
             //Grammar grammar = wildcard.CreatePasswordGrammar();
             //speechRecognizer.LoadGrammarAsync(grammar);
-            // Create and load a sample grammar.  
+            // Create and load a sample grammar.
             //Grammar testGrammar =
             //  new Grammar(new GrammarBuilder("testing testing"));
             //testGrammar.Name = "Test Grammar";
             //recognizer.LoadGrammar(testGrammar);
 
-            // Attach event handlers for recognition events.  
+            // Attach event handlers for recognition events.
             //speechRecognizer.SpeechRecognized +=
             //      new EventHandler<SpeechRecognizedEventArgs>(
             //        SpeechRecognitionEngine_SpeechRecognized);
@@ -1528,15 +1528,15 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
             //completed = false;
             isKeyboard = true;
-            //        Start asynchronous emulated recognition.   
-            //         This matches the grammar and generates a SpeechRecognized event.  
+            //        Start asynchronous emulated recognition.
+            //         This matches the grammar and generates a SpeechRecognized event.
             //speechRecognizer.EmulateRecognizeAsync("testing testing");
             //         Check to see if recognizer is loaded, wait if it is not loaded.
             //System.Windows.MessageBox.Show($"The current state is: {speechRecognizer.State}");
             //if (speechRecognizer.State != RecognizerState.Listening)
             //    {
             //        Thread.Sleep(5000);
-            //        // Put recognizer in lisHer job page of onto pressed her job stop listening wake up stopped listening wake up tening state.  
+            //        // Put recognizer in lisHer job page of onto pressed her job stop listening wake up stopped listening wake up tening state.
             //        speechRecognizer.EmulateRecognizeAsync("Start listening");
             //    }
             //    else
@@ -2225,16 +2225,16 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             });
             using (var db = new MyDatabase())
             {
-                var categoryId = db.tblCategories.Where(c => c.Category.ToLower() == result).FirstOrDefault().MenuNumber;
+                var categoryId = db.Categories.Where(c => c.CategoryName.ToLower() == result).FirstOrDefault().ID;
                 var computerId = db.Computers.Where(c => c.ComputerName == Environment.MachineName).FirstOrDefault()?.ID;
-                List<tblLauncher> launchItems = null;
+                List<Launcher> launchItems = null;
                 if (filterBy != null)
                 {
-                    launchItems = db.tblLaunchers.Where(l => l.Menu == categoryId && (l.ComputerID == null || l.ComputerID == computerId) && l.Name.ToLower().Contains(filterBy)).OrderBy(l => l.Name).ToList();
+                    launchItems = db.Launchers.Where(l => l.CategoryID == categoryId && (l.ComputerID == null || l.ComputerID == computerId) && l.Name.ToLower().Contains(filterBy)).OrderBy(l => l.Name).ToList();
                 }
                 else
                 {
-                    launchItems = db.tblLaunchers.Where(l => l.Menu == categoryId && (l.ComputerID == null || l.ComputerID == computerId)).OrderBy(l => l.Name).ToList();
+                    launchItems = db.Launchers.Where(l => l.CategoryID == categoryId && (l.ComputerID == null || l.ComputerID == computerId)).OrderBy(l => l.Name).ToList();
                 }
                 foreach (var launchItem in launchItems)
                 {
@@ -2611,7 +2611,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                 }
             }
 
-            // Make Application the foreground application and send it 
+            // Make Application the foreground application and send it
             // a set of Keys.
             SetForegroundWindow(applicationHandle);
             foreach (var item in keys)
@@ -2764,7 +2764,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         /// <summary>
         /// Creates a data client without LUIS intent support.
-        /// Speech recognition with data (for example from a file or audio source).  
+        /// Speech recognition with data (for example from a file or audio source).
         /// The data is broken up into buffers and each buffer is sent to the Speech Recognition Service.
         /// No modification is done to the buffers, so the user can apply their
         /// own Silence Detection if desired.
@@ -2793,7 +2793,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
 
         /// <summary>
         /// Creates a data client with LUIS intent support.
-        /// Speech recognition with data (for example from a file or audio source).  
+        /// Speech recognition with data (for example from a file or audio source).
         /// The data is broken up into buffers and each buffer is sent to the Speech Recognition Service.
         /// No modification is done to the buffers, so the user can apply their
         /// own Silence Detection if desired.
@@ -2825,8 +2825,8 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             {
                 // Note for wave files, we can just send data from the file right to the server.
                 // In the case you are not an audio file in wave format, and instead you have just
-                // raw data (for example audio coming over bluetooth), then before sending up any 
-                // audio data, you must first send up an SpeechAudioFormat descriptor to describe 
+                // raw data (for example audio coming over bluetooth), then before sending up any
+                // audio data, you must first send up an SpeechAudioFormat descriptor to describe
                 // the layout and format of your raw audio data via DataRecognitionClient's sendAudioFormat() method.
                 int bytesRead = 0;
                 byte[] buffer = new byte[1024];
@@ -2838,7 +2838,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                         // Get more Audio data to send into byte buffer.
                         bytesRead = fileStream.Read(buffer, 0, buffer.Length);
 
-                        // Send of audio data to service. 
+                        // Send of audio data to service.
                         this.dataClient.SendAudio(buffer, bytesRead);
                     }
                     while (bytesRead > 0);
@@ -2919,7 +2919,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             }
             using (var db = new MyDatabase())
             {
-                var globalIntellisense = db.tblCustomIntelliSenses.Where(c => c.tblLanguage.Language == languageMatched && c.tblCategory.Category == categoryMatched && c.Display_Value == phrase).FirstOrDefault();
+                var globalIntellisense = db.CustomIntelliSenses.Where(c => c.Language.LanguageName == languageMatched && c.Category.CategoryName == categoryMatched && c.Display_Value == phrase).FirstOrDefault();
                 if (globalIntellisense != null)
                 {
                     ActivateApp(currentProcess.MainWindowHandle);
@@ -2953,33 +2953,33 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
             phrase = phrase.Replace("jay query", "jquery");
             using (var db = new MyDatabase())
             {
-                var languages = db.tblLanguages.OrderBy(l => l.Language).ToList();
+                var languages = db.Languages.OrderBy(l => l.LanguageName).ToList();
                 foreach (var language in languages)
                 {
-                    if (phrase.StartsWith(language.Language.ToLower()))
+                    if (phrase.StartsWith(language.LanguageName.ToLower()))
                     {
-                        languageMatched = language.Language;
+                        languageMatched = language.LanguageName;
                         if (languageMatched == "intellisense")
                         {
                             languageMatched = "not applicable";
                         }
-                        var categories = db.tblCategories.Where(c => c.Category_Type == "IntelliSense Command").ToList();
+                        var categories = db.Categories.Where(c => c.Category_Type == "IntelliSense Command").ToList();
                         var computerId = db.Computers.Where(c => c.ComputerName == Environment.MachineName).FirstOrDefault()?.ID;
                         foreach (var category in categories)
                         {
-                            var temporary = phrase.Replace(language.Language.ToLower(), "").Trim();
-                            if (category.Category.ToLower().EndsWith(temporary))
+                            var temporary = phrase.Replace(language.LanguageName.ToLower(), "").Trim();
+                            if (category.CategoryName.ToLower().EndsWith(temporary))
                             {
-                                categoryMatched = category.Category;
+                                categoryMatched = category.CategoryName;
                                 languageAndCategoryAlreadyMatched = true;
                                 List<CustomIntelliSense> commands = null;
                                 if (filterBy != null)
                                 {
-                                    commands = db.tblCustomIntelliSenses.Where(i => i.Language_ID == language.ID && i.Category_ID == category.MenuNumber && (i.ComputerID == null || i.ComputerID == computerId) && i.Display_Value.ToLower().Contains(filterBy)).OrderBy(s => s.Display_Value).ToList();
+                                    commands = db.CustomIntelliSenses.Where(i => i.LanguageID == language.ID && i.CategoryID == category.ID && (i.ComputerID == null || i.ComputerID == computerId) && i.Display_Value.ToLower().Contains(filterBy)).OrderBy(s => s.Display_Value).ToList();
                                 }
                                 else
                                 {
-                                    commands = db.tblCustomIntelliSenses.Where(i => i.Language_ID == language.ID && i.Category_ID == category.MenuNumber && (i.ComputerID == null || i.ComputerID == computerId)).OrderBy(s => s.Display_Value).ToList();
+                                    commands = db.CustomIntelliSenses.Where(i => i.LanguageID == language.ID && i.CategoryID == category.ID && (i.ComputerID == null || i.ComputerID == computerId)).OrderBy(s => s.Display_Value).ToList();
                                 }
                                 speechRecognizer.UnloadAllGrammars();
                                 Choices choices = new Choices();
@@ -2989,7 +2989,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
                                 });
                                 foreach (var command in commands)
                                 {
-                                    if (category.Category == "Passwords")
+                                    if (category.CategoryName == "Passwords")
                                     {
                                         this.WriteCommandLine($"{command.Display_Value}");
                                     }
@@ -3579,7 +3579,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         }
 
         /// <summary>
-        /// Helper function for INotifyPropertyChanged interface 
+        /// Helper function for INotifyPropertyChanged interface
         /// </summary>
         /// <typeparam name="T">Property type</typeparam>
         /// <param name="caller">Property name</param>
@@ -3627,7 +3627,7 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         {
             using (var db = new MyDatabase())
             {
-                var launcher = db.tblLaunchers.Where(l => l.Name.ToLower() == name).FirstOrDefault();
+                var launcher = db.Launchers.Where(l => l.Name.ToLower() == name).FirstOrDefault();
 
                 if (launcher != null)
                 {
@@ -3654,9 +3654,9 @@ namespace Microsoft.CognitiveServices.SpeechRecognition
         {
             using (var db = new MyDatabase())
             {
-                var languageId = db.tblLanguages.Where(l => l.Language == language).FirstOrDefault()?.ID;
-                var categoryId = db.tblCategories.Where(c => c.Category == category).FirstOrDefault()?.MenuNumber;
-                IEnumerable<CustomIntelliSense> customIntelliSenses = db.tblCustomIntelliSenses.Where(c => c.Language_ID == languageId && c.Category_ID == categoryId);
+                var languageId = db.Languages.Where(l => l.LanguageName == language).FirstOrDefault()?.ID;
+                var categoryId = db.Categories.Where(c => c.CategoryName == category).FirstOrDefault()?.ID;
+                IEnumerable<CustomIntelliSense> customIntelliSenses = db.CustomIntelliSenses.Where(c => c.LanguageID == languageId && c.CategoryID == categoryId);
                 if (customIntelliSenses != null)
                 {
                     return customIntelliSenses.ToList();

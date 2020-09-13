@@ -5,9 +5,7 @@ namespace SpeechToTextWPFSample.Models
     using System.ComponentModel.DataAnnotations;
     using System.ComponentModel.DataAnnotations.Schema;
     using System.Data.Entity.Spatial;
-
-    [Table("tblMultipleLauncher")]
-    public partial class tblMultipleLauncher
+    public partial class MultipleLauncher
     {
         public int ID { get; set; }
 
